@@ -104,7 +104,7 @@ def main():
     print(hdr)
     for closed in (False, True):
         r, p, t, f = run(stream, reps, vocab, init, closed)
-        nm = "정적 B" if not closed else "UCBAD-X"
+        nm = "정적 B" if not closed else "HyCAD"
         pct = lambda k: 100 * r[k][0] / max(r[k][1], 1)
         print(f"{nm:10}{pct('clean'):9.0f}%{pct('drift'):9.0f}%{pct('attack'):10.0f}%"
               f"{(str(t)+'회' if closed else '-'):>8}{(str(p)+'회' if closed else '-'):>11}"
