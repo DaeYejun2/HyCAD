@@ -1,5 +1,5 @@
 """
-문서 UCBAD-X_설계와검증.html 의 표들을 재생성한다.
+문서 HyCAD_설계와검증.html 의 표들을 재생성한다.
 
 사용:
   python preprocess.py --all      # 먼저 캡처를 cache/ 로 전처리 (10~15분)
@@ -159,10 +159,10 @@ def show_hidden():
             print(f"  {nm:18}{n.max():10.4f}{np.median(a):11.4f}{auc:8.3f}{a.min()-n.max():+10.4f}")
         # 집합 복원
         th = ctl.Thresholds.calibrate(seg(N, "normal"), R, F, N["vocab"])
-        ok = np.mean([({r for r in R if ch.a1_scores(s, R, F)[r] > th.a1} |
-                       {r for r in R if ch.a2_scores(c, R)[r] > th.a2}) == INF
+        ok = np.mean([{r for r in R if ch.a1_scores(s, R, F)[r] > th.a1} == INF
                       for c, s in seg(A, "attack")])
-        print(f"  감염 집합 정확 복원 {100*ok:.0f}%   (θ_A1={th.a1:.4f}, θ_A2={th.a2:.4f})")
+        print(f"  A 로 감염 집합 복원 {100*ok:.0f}%   (θ_A={th.a1:.4f})")
+        print("  집합이 변하지 않는 공격이라 A 는 잡지 못한다. 위협 모델 밖이다.")
 
 
 # ------------------------------------------------------------------ 8절
@@ -195,18 +195,22 @@ def show_controller():
 
 def show_channel_c():
     print("\n=== C 채널 — 요청당 작업량 ===")
-    ref = {}
+    ref, cth = {}, {}
     for deploy, bkey in BASELINE.items():
         B = load(bkey)
+        base = seg(B, "normal") or seg(B, "attack")
         ref[deploy] = float(np.median([ch.work_rate(c, B["reps"], B["vocab"])
-                                       for c, _ in (seg(B, "normal") or seg(B, "attack"))]))
+                                       for c, _ in base]))
+        cth[deploy] = ctl.THETA_C
+    for d in cth:
+        print(f"  [{d}] c_ref={ref[d]:.1f}  θ_C={cth[d]:.4f}")
     print(f"{'캡처':22}{'정답':>10}{'C 중앙값':>11}{'발화율':>9}")
     for cap in CAPTURES:
         D = load(cap["key"]); R = D["reps"]
         which = "attack" if any(l == "attack" for l, _, _ in D["rows"]) else "normal"
         v = np.array([ch.c_score(c, R, D["vocab"], ref[cap["deploy"]]) for c, _ in seg(D, which)])
         print(f"{cap['key']:22}{cap['label']:>10}{np.median(v):11.4f}"
-              f"{100*np.mean(v>ctl.THETA_C):8.0f}%")
+              f"{100*np.mean(v>cth[cap['deploy']]):8.0f}%")
 
 
 if __name__ == "__main__":
