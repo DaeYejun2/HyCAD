@@ -78,6 +78,31 @@ CAPTURES = [
          path=r"capture_fe_v10_atk\normal_catalogue.jsonl.gz",
          attack_at=None, seg="attack", infected={0}, label="부분 감염",
          note="Node 10 에서 같은 방식으로 주입. 새 syscall 0종"),
+
+    # ---------------- catalogue / 정찰·명령 실행 (2026-09-25) ----------------
+    # 페이로드: whoami, id, uname, cat /etc/*, ls /etc /root /var/log, env, ps, netstat 를
+    #           1초 간격으로 반복. docker exec 로 replica 안에서 실행 -> 새 프로세스 9종 등장.
+    # XMRig 와 흔적의 성격이 다르다 (CPU/메모리 대신 프로세스 생성 + 파일 읽기).
+    # 각 캡처는 정상 5분 -> 공격 25분 구조다.
+    dict(key="recon_1of4", deploy="catalogue",
+         path="caps/recon_1of4/normal_catalogue.jsonl.gz",
+         attack_at="2026-09-25T13:13:39+00:00", infected={0}, label="부분 감염",
+         note="정찰 1개 (catalogue_1)"),
+
+    dict(key="recon_2of4", deploy="catalogue",
+         path="caps/recon_2of4/normal_catalogue.jsonl.gz",
+         attack_at="2026-09-25T17:33:38+00:00", infected={0, 1}, label="부분 감염",
+         note="정찰 2개. 대칭 지표가 동점이 되는 구간"),
+
+    dict(key="recon_3of4", deploy="catalogue",
+         path="caps/recon_3of4/normal_catalogue.jsonl.gz",
+         attack_at="2026-09-25T18:04:40+00:00", infected={0, 1, 2}, label="부분 감염",
+         note="정찰 3개. 대칭 지표가 역전하는 구간"),
+
+    dict(key="recon_4of4", deploy="catalogue",
+         path="caps/recon_4of4/normal_catalogue.jsonl.gz",
+         attack_at="2026-09-25T18:34:43+00:00", infected={0, 1, 2, 3}, label="전원 감염",
+         note="정찰 4개. 동료 축이 원리적으로 0 이 되는 지점"),
 ]
 
 # 배포별 임계값 보정에 사용할 정상 캡처
