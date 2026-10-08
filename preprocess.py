@@ -40,7 +40,21 @@ FIELD_MAP = [
 ]
 
 
-def aggregate(src, out, replica_prefix=None):
+# replica 식별자로 쓸 필드.
+#   Docker/Compose : container.name  (docker-compose_catalogue_1 처럼 replica 마다 다름)
+#   Kubernetes     : k8s.pod.name    (container.name 은 pod 안 컨테이너 이름이라 4개가 모두 같다)
+REPLICA_FIELD_CANDIDATES = ["k8s.pod.name", "container.name"]
+
+
+def pick_replica_field(sample):
+    """첫 줄을 보고 replica 식별자로 쓸 필드를 고른다."""
+    for f in REPLICA_FIELD_CANDIDATES:
+        if sample.get(f):
+            return f
+    return "container.name"
+
+
+def aggregate(src, out, replica_prefix=None, replica_field=None):
     sets = defaultdict(lambda: defaultdict(set))
     freq = defaultdict(Counter)
     t0 = None
@@ -51,7 +65,9 @@ def aggregate(src, out, replica_prefix=None):
                 e = json.loads(line)
             except Exception:
                 continue
-            rep = e.get("container.name")
+            if replica_field is None:
+                replica_field = pick_replica_field(e)
+            rep = e.get(replica_field)
             if replica_prefix and not (rep or "").startswith(replica_prefix):
                 continue
             ts = e.get("evt.rawtime")
@@ -72,13 +88,14 @@ def aggregate(src, out, replica_prefix=None):
     data = dict(
         sets={k: {a: sorted(b) for a, b in v.items()} for k, v in sets.items()},
         freq={k: dict(v) for k, v in freq.items()},
-        t0=t0, feats=FEATURES, n=n,
+        t0=t0, feats=FEATURES, n=n, replica_field=replica_field,
     )
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     pickle.dump(data, open(out, "wb"))
     snaps = max(k[0] for k in sets) + 1
     reps = len({k[1] for k in sets})
-    print(f"  {os.path.basename(src)}: {n:,} events / {snaps} snapshots / {reps} replicas -> {out}")
+    print(f"  {os.path.basename(src)}: {n:,} events / {snaps} snapshots / "
+          f"{reps} replicas (식별자={replica_field}) -> {out}")
     return data
 
 
