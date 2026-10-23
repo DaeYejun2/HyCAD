@@ -1,0 +1,46 @@
+# Standalone public gateway; keep the live monitor stack running separately.
+name: hycad-ingress
+services:
+  gateway:
+    image: ${HYCAD_NGINX_IMAGE:?Set a verified nginx image digest}
+    ports:
+      - "${HYCAD_INGRESS_BIND_IP:?Set the server LAN address}:80:80"
+      - "${HYCAD_INGRESS_BIND_IP:?Set the server LAN address}:443:443"
+    volumes:
+      - type: bind
+        source: ${HYCAD_HTTPS_DIR:?Set the persistent HTTPS directory}/nginx/conf.d
+        target: /etc/nginx/conf.d
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${HYCAD_HTTPS_DIR:?}/www
+        target: /var/www/certbot
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${HYCAD_HTTPS_DIR:?}/letsencrypt
+        target: /etc/letsencrypt
+        read_only: true
+        bind:
+          create_host_path: false
+    networks: [monitor]
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:rw,nosuid,nodev,size=32m
+      - /var/run:rw,nosuid,nodev,size=4m
+    restart: always
+    stop_grace_period: 30s
+    mem_limit: 128m
+    pids_limit: 64
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+        compress: "true"
+networks:
+  monitor:
+    external: true
+    name: ${HYCAD_MONITOR_NETWORK:-hycad-monitor_default}

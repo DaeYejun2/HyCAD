@@ -1,0 +1,2752 @@
+{
+  "id": null,
+  "uid": "hycad-overview",
+  "title": "HyCAD · LIVE / 캡처 자동 재생",
+  "description": "LIVE는 현재 Sysdig 입력, 캡처 재생은 저장 자료의 반복 재판정입니다. 30초 창을 판정하고 화면은 5초마다 조회합니다. 이상·normality drift는 모델의 의심이며 원인 확정이 아닙니다.",
+  "tags": [
+    "HyCAD",
+    "live",
+    "replay"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "editable": false,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "type": "link",
+      "title": "캡처 수동 재생 화면",
+      "targetBlank": false,
+      "url": "/d/hycad-replay?from=now-30m&to=now"
+    },
+    {
+      "type": "link",
+      "title": "캡처 선택 · 시작/정지 · 배속",
+      "targetBlank": false,
+      "url": "/hycad/replay/"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "판정 흐름 · ${deployment} / ${mode:text} / ${capture}",
+      "type": "state-timeline",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "description": "기록 시각의 판정입니다. 캡처 재생의 시간축은 이번 재생 처리 시각이며 원본 캡처 시각은 아래에 별도 표시됩니다. 회색은 불완전·오래된 입력 또는 연결 불가입니다. 정상 변화 의심은 A 침묵·B 초과·C 안정 조건이며 정상 원인이 입증됐다는 뜻은 아닙니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "정상 범위",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "부분 이상 의심",
+                  "color": "orange"
+                },
+                "2": {
+                  "text": "전체 이상 의심",
+                  "color": "red"
+                },
+                "3": {
+                  "text": "정상 변화 의심",
+                  "color": "blue"
+                },
+                "4": {
+                  "text": "판정 불가",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 90
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "gray",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "auto",
+        "rowHeight": 0.9,
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "alignValue": "left"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((sum without(verdict) ((hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"normal\"} * 0) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"partial_infection\"} * 1) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"all_infection\"} * 2) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"drift\"} * 3) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"insufficient_data\"} * 4))) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(4)",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "legendFormat": "판정"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "현재 모델 판정",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 5,
+        "h": 4
+      },
+      "description": "전체 이상 의심은 서비스 분류입니다. 실제 임계값 초과 레플리카와 실제 공격 여부는 아래 근거로 구분합니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "정상 범위",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "부분 이상 의심",
+                  "color": "orange"
+                },
+                "2": {
+                  "text": "전체 이상 의심",
+                  "color": "red"
+                },
+                "3": {
+                  "text": "정상 변화 의심",
+                  "color": "blue"
+                },
+                "4": {
+                  "text": "판정 불가",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((sum without(verdict) ((hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"normal\"} * 0) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"partial_infection\"} * 1) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"all_infection\"} * 2) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"drift\"} * 3) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"insufficient_data\"} * 4))) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(4)",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "입력 준비",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 5,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "description": "모든 레플리카·완전한 30초 창·최신 입력이 필요합니다. HTTP 연결만으로 정상 판정을 표시하지 않습니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "연결·선택 확인",
+                  "color": "gray"
+                },
+                "0": {
+                  "text": "판정 불가",
+                  "color": "orange"
+                },
+                "1": {
+                  "text": "판정 가능",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1))) or vector(-1)",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "B 초과 레플리카",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "description": "현재 창에서 자신의 B 점수가 기준선 임계값을 넘은 레플리카 수입니다. 전체 이상 의심이 곧 4개 모두 초과했다는 뜻은 아닙니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "판정 불가",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum((hycad_channel_b_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"b\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Normality drift",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 13,
+        "y": 4,
+        "w": 5,
+        "h": 4
+      },
+      "description": "A 침묵 + B 초과 + C 안정일 때만 표시합니다. 버전·부하 등 정상 원인 확인이 필요합니다. 기준선은 고정하며 자동 재학습하지 않습니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "판정 불가",
+                  "color": "gray"
+                },
+                "0": {
+                  "text": "현재 미관측",
+                  "color": "text"
+                },
+                "1": {
+                  "text": "정상 변화 의심",
+                  "color": "blue"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"drift\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "입력 원본 구간 종료",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 4,
+        "w": 6,
+        "h": 4
+      },
+      "description": "캡처 모드에서는 과거 캡처의 시각입니다. LIVE 입력 상태와 혼동하지 않습니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "unit": "dateTimeAsIso",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(hycad_window_end_timestamp_seconds{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) * 1000",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "A · 레플리카 간 차이 / 임계값",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 7
+      },
+      "description": "1보다 크면 해당 레플리카의 A 임계값 초과입니다. 집합 특성 차이를 비교하며 A 우선 판정 규칙을 적용합니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "unit": "none",
+          "decimals": 2,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "axisLabel": "점수 / 임계값",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#C2353D",
+                "value": 1
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*1$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0072B2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*2$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D55E00"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    12,
+                    6
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*3$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#009E73"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    3,
+                    4
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*4$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#CC79A7"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    14,
+                    5,
+                    3,
+                    5
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(hycad_channel_a_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} / on(deployment,mode,capture,job,instance) group_left() (hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"a\"} > 0)) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "legendFormat": "{{replica}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^docker-compose_(catalogue|front-end)_([1-4])$",
+            "renamePattern": "$1 $2"
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "B · 정상 기준선 편차 / 임계값 (로그축)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 7
+      },
+      "description": "1보다 크면 B 임계값 초과입니다. 큰 편차와 정상 부근을 함께 보기 위해 로그축을 씁니다. 0은 로그축에서 표시하지 않습니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "unit": "none",
+          "decimals": 2,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "axisLabel": "점수 / 임계값",
+            "scaleDistribution": {
+              "type": "log",
+              "log": 10
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#C2353D",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*1$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0072B2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*2$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D55E00"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    12,
+                    6
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*3$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#009E73"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    3,
+                    4
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*4$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#CC79A7"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    14,
+                    5,
+                    3,
+                    5
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(hycad_channel_b_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} / on(deployment,mode,capture,job,instance) group_left() (hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"b\"} > 0)) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "legendFormat": "{{replica}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^docker-compose_(catalogue|front-end)_([1-4])$",
+            "renamePattern": "$1 $2"
+          }
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "C · 연결 이벤트당 작업량 변화 / 임계값",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 9,
+        "h": 7
+      },
+      "description": "C는 서비스 전체 abs(log2((이벤트/accept 계열 이벤트)/기준값))입니다. 1보다 크면 임계값 초과입니다. HTTP 요청당 비용이나 개별 레플리카 점수가 아닙니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "unit": "none",
+          "decimals": 2,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "axisLabel": "점수 / 임계값",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#C2353D",
+                "value": 1
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(hycad_channel_c_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} / on(deployment,mode,capture,job,instance) (hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"c\"} > 0)) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "legendFormat": "C / 임계값"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "현재 레플리카 · 모델 지목과 실제 초과",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 15,
+        "w": 15,
+        "h": 7
+      },
+      "description": "모델 지목과 각 레플리카의 A/B 실제 임계값 초과를 따로 표시합니다. 데이터가 불완전하거나 오래되면 이전 점수를 유지하지 않습니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "decimals": 2,
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "모델 지목"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "없음"
+                      },
+                      "1": {
+                        "text": "지목",
+                        "color": "orange"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "[AB] 실제 초과"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "없음"
+                      },
+                      "1": {
+                        "text": "초과",
+                        "color": "orange"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "레플리카"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "docker-compose_catalogue_1": {
+                        "text": "catalogue 1"
+                      },
+                      "docker-compose_catalogue_2": {
+                        "text": "catalogue 2"
+                      },
+                      "docker-compose_catalogue_3": {
+                        "text": "catalogue 3"
+                      },
+                      "docker-compose_catalogue_4": {
+                        "text": "catalogue 4"
+                      },
+                      "docker-compose_front-end_1": {
+                        "text": "front-end 1"
+                      },
+                      "docker-compose_front-end_2": {
+                        "text": "front-end 2"
+                      },
+                      "docker-compose_front-end_3": {
+                        "text": "front-end 3"
+                      },
+                      "docker-compose_front-end_4": {
+                        "text": "front-end 4"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "레플리카",
+            "desc": false
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by(replica) ((hycad_replica_anomaly{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1))",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by(replica) ((hycad_channel_a_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"a\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1))",
+          "refId": "B",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by(replica) ((hycad_channel_b_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"b\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1))",
+          "refId": "C",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by(replica) ((hycad_channel_a_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} / on(deployment,mode,capture,job,instance) group_left() (hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"a\"} > 0)) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1))",
+          "refId": "D",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by(replica) ((hycad_channel_b_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} / on(deployment,mode,capture,job,instance) group_left() (hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"b\"} > 0)) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1))",
+          "refId": "E",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "replica",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "pattern": "^(replica|Value #[A-E])$"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "replica": "레플리카",
+              "Value #A": "모델 지목",
+              "Value #B": "A 실제 초과",
+              "Value #C": "B 실제 초과",
+              "Value #D": "A 배수",
+              "Value #E": "B 배수"
+            },
+            "indexByName": {
+              "replica": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4,
+              "Value #E": 5
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "최근 판단 근거 · 최신 3개 창",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "hycad-loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 6
+      },
+      "description": "완료된 창의 짧은 모델 설명입니다. 처리 시각과 원본 구간을 함께 확인하세요. 공격·정상 원인 검토와 전후 자료는 LIVE 사건 조사에서 확인합니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "해당 입력의 판단 설명 없음"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "hycad-loki"
+          },
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 3,
+          "direction": "backward",
+          "expr": "{job=\"hycad-decisions\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",playback!=\"manual\"} | json summary=\"explanation.summary\" | line_format `{{ .summary | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" | replace \"front-end_\" \"front-end \" }}`"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "선택한 입력과 기준선 · 자동 재학습 없음",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "hycad-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 5
+      },
+      "description": "각 서비스의 고정 기준선으로 보정합니다. LIVE는 현재 수집, 캡처는 저장 자료를 반복 재생합니다. 캡처를 바꾸어도 LIVE 수집은 계속됩니다. 기준선과 데이터가 같은 서비스·수집 정책인지 확인해야 하며 현재 연결 확인을 정확도 검증으로 해석하지 않습니다.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "판정 불가 · 입력 확인",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "wrapText": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 모드"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "live": {
+                        "text": "LIVE"
+                      },
+                      "replay": {
+                        "text": "캡처 재생"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "B 방식"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "z": {
+                        "text": "고정 z-score"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(hycad_baseline_info{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} * on(deployment,mode,capture,job,instance) group_left(title,reference_description,cache_sha256,source_sha256) hycad_capture_info{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"}) or on(deployment,mode,capture,job,instance) hycad_baseline_info{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"}",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "job": true,
+              "instance": true,
+              "cache_sha256": true,
+              "source_sha256": true,
+              "reference_description": true
+            },
+            "renameByName": {
+              "deployment": "서비스",
+              "mode": "입력 모드",
+              "capture": "캡처 ID",
+              "title": "캡처 설명",
+              "reference": "기준선 설명",
+              "sha256": "기준선 SHA-256",
+              "b_kind": "B 방식"
+            },
+            "indexByName": {
+              "deployment": 0,
+              "mode": 1,
+              "capture": 2,
+              "title": 3,
+              "reference": 4,
+              "b_kind": 5,
+              "sha256": 6
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "title": "LIVE 사건 상세 · 공격 근거 / 정상 원인 가능성 / 보존 자료 (펼쳐 보기)",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 25,
+          "type": "table",
+          "title": "사건 판정 · 전체 분류와 실제 임계값 초과 대상",
+          "datasource": {
+            "type": "loki",
+            "uid": "hycad-loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 34,
+            "w": 24,
+            "h": 8
+          },
+          "timeFrom": "7d",
+          "description": "최근 7일 보존 사건의 판정 근거입니다. A/B 실제 초과는 개별 레플리카의 점수와 임계값을 비교한 결과입니다. C는 서비스 전체의 연결 이벤트당 작업량 지표이므로 개별 레플리카 초과 집합이 없습니다. 전체 이상 의심은 제어기의 전체 분류이며, 모든 레플리카가 B를 초과하거나 공격을 받았다는 뜻이 아닙니다. 모든 사건과 최신 검토 상태를 포함합니다. 미분석 사건은 원인을 판단하지 않습니다. 아래 검토 완료 표에는 최신 기록이 검토 완료인 사건만 표시합니다.",
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "hycad-loki"
+              },
+              "expr": "{job=\"hycad-investigations\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "queryType": "range",
+              "editorMode": "code",
+              "direction": "backward",
+              "maxLines": 2000
+            }
+          ],
+          "transformations": [
+            {
+              "id": "extractFields",
+              "options": {
+                "source": "Line",
+                "format": "json",
+                "replace": true
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "updated_at",
+                    "desc": false
+                  }
+                ]
+              }
+            },
+            {
+              "id": "groupBy",
+              "options": {
+                "fields": {
+                  "window_end_ms": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "model_verdict": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "replicas": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "a_exceeded": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "b_exceeded": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "rule_summary": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "incident_id": {
+                    "operation": "groupby",
+                    "aggregations": []
+                  },
+                  "review_state": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "renameByName": {
+                  "incident_id": "사건 ID",
+                  "window_end_ms (lastNotNull)": "이상 구간 종료",
+                  "model_verdict (lastNotNull)": "모델 분류",
+                  "replicas (lastNotNull)": "모델 지목 대상",
+                  "a_exceeded (lastNotNull)": "A 실제 초과",
+                  "b_exceeded (lastNotNull)": "B 실제 초과",
+                  "rule_summary (lastNotNull)": "적용된 판정 규칙",
+                  "review_state (lastNotNull)": "검토 상태"
+                },
+                "indexByName": {
+                  "window_end_ms (lastNotNull)": 0,
+                  "model_verdict (lastNotNull)": 1,
+                  "replicas (lastNotNull)": 2,
+                  "a_exceeded (lastNotNull)": 3,
+                  "b_exceeded (lastNotNull)": 4,
+                  "review_state (lastNotNull)": 5,
+                  "rule_summary (lastNotNull)": 6,
+                  "incident_id": 7
+                },
+                "excludeByName": {
+                  "incident_id": true
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "미기록 · 미확인",
+              "decimals": 0,
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "wrapText": true,
+                "minWidth": 70
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "이상 구간 종료"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "dateTimeAsIso"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 155
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "모델 분류"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 120
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "모델 지목 대상"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 150
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "A 실제 초과"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 105
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "B 실제 초과"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 105
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "검토 상태"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 175
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "lg",
+            "sortBy": [
+              {
+                "displayName": "이상 구간 종료",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": 26,
+          "type": "table",
+          "title": "검토 완료 사건 · 현재 해석과 남은 판단",
+          "datasource": {
+            "type": "loki",
+            "uid": "hycad-loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 42,
+            "w": 24,
+            "h": 7
+          },
+          "timeFrom": "7d",
+          "description": "최근 7일 중 사건별 최신 기록이 검토 완료인 사건만 표시합니다. 최신 기록이 미분석 또는 검토 오류로 바뀌면 이전 검토 결과는 이 표에서 제외합니다. 모든 사건은 위 판정 표에서 확인할 수 있습니다. 자동 판정과 원인 조사는 별개입니다. 분석자가 근거를 검토해 등록한 사건만 검토 완료로 표시합니다. 미분석은 정상·오탐·공격 중 어느 것으로도 확정하지 않은 상태입니다. 검토 완료 뒤에도 원인 미확정이나 공격 배제 불가가 남을 수 있습니다.",
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "hycad-loki"
+              },
+              "expr": "{job=\"hycad-investigations\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "queryType": "range",
+              "editorMode": "code",
+              "direction": "backward",
+              "maxLines": 2000
+            }
+          ],
+          "transformations": [
+            {
+              "id": "extractFields",
+              "options": {
+                "source": "Line",
+                "format": "json",
+                "replace": true
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "updated_at",
+                    "desc": false
+                  }
+                ]
+              }
+            },
+            {
+              "id": "groupBy",
+              "options": {
+                "fields": {
+                  "window_end_ms": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "review_state": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "assessment": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "reviewed_at_text": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "incident_id": {
+                    "operation": "groupby",
+                    "aggregations": []
+                  }
+                }
+              }
+            },
+            {
+              "id": "filterByValue",
+              "options": {
+                "filters": [
+                  {
+                    "fieldName": "review_state (lastNotNull)",
+                    "config": {
+                      "id": "equal",
+                      "options": {
+                        "value": "검토 완료 · 원인 미확정"
+                      }
+                    }
+                  }
+                ],
+                "match": "all",
+                "type": "include"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "renameByName": {
+                  "incident_id": "사건 ID",
+                  "window_end_ms (lastNotNull)": "이상 구간 종료",
+                  "review_state (lastNotNull)": "검토 상태",
+                  "assessment (lastNotNull)": "현재 해석",
+                  "reviewed_at_text (lastNotNull)": "검토 시각"
+                },
+                "indexByName": {
+                  "incident_id": 4,
+                  "window_end_ms (lastNotNull)": 0,
+                  "review_state (lastNotNull)": 1,
+                  "assessment (lastNotNull)": 2,
+                  "reviewed_at_text (lastNotNull)": 3
+                },
+                "excludeByName": {
+                  "incident_id": true
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "검토 완료 기록 없음",
+              "decimals": 0,
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "wrapText": true,
+                "minWidth": 70
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "이상 구간 종료"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "dateTimeAsIso"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 165
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "검토 상태"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 195
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "검토 시각"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 220
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "검토 상태"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "미분석": {
+                            "text": "미분석",
+                            "color": "gray"
+                          },
+                          "검토 완료 · 원인 미확정": {
+                            "text": "검토 완료 · 원인 미확정",
+                            "color": "blue"
+                          },
+                          "검토 기록 오류 · 미분석": {
+                            "text": "검토 기록 오류 · 미분석",
+                            "color": "orange"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "lg",
+            "sortBy": [
+              {
+                "displayName": "이상 구간 종료",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": 27,
+          "type": "table",
+          "title": "검토 완료 사건 · 공격 근거 / 정상 동작 가능성 / 미확인 원인",
+          "datasource": {
+            "type": "loki",
+            "uid": "hycad-loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 49,
+            "w": 24,
+            "h": 11
+          },
+          "timeFrom": "7d",
+          "description": "최근 7일 중 사건별 최신 기록이 검토 완료인 사건만 표시합니다. 최신 기록이 미분석 또는 검토 오류로 바뀌면 이전 검토 결과는 이 표에서 제외합니다. 모든 사건은 위 판정 표에서 확인할 수 있습니다. 보존한 전후 이벤트, 연결 정보, 서비스 로그를 근거로 검토한 내용입니다. 공격 흔적을 발견하지 못했다는 결론은 보존 범위 안에서의 결과이며 공격이 없음을 증명하지 않습니다. 정상 동작 가능성은 오탐 확정과 구분합니다. 비밀·원본 명령행·로그 원문은 표시하지 않습니다.",
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "hycad-loki"
+              },
+              "expr": "{job=\"hycad-investigations\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "queryType": "range",
+              "editorMode": "code",
+              "direction": "backward",
+              "maxLines": 2000
+            }
+          ],
+          "transformations": [
+            {
+              "id": "extractFields",
+              "options": {
+                "source": "Line",
+                "format": "json",
+                "replace": true
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "updated_at",
+                    "desc": false
+                  }
+                ]
+              }
+            },
+            {
+              "id": "groupBy",
+              "options": {
+                "fields": {
+                  "window_end_ms": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "attack_evidence": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "benign_evidence": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "unknowns": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "incident_id": {
+                    "operation": "groupby",
+                    "aggregations": []
+                  },
+                  "review_state": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "id": "filterByValue",
+              "options": {
+                "filters": [
+                  {
+                    "fieldName": "review_state (lastNotNull)",
+                    "config": {
+                      "id": "equal",
+                      "options": {
+                        "value": "검토 완료 · 원인 미확정"
+                      }
+                    }
+                  }
+                ],
+                "match": "all",
+                "type": "include"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "renameByName": {
+                  "incident_id": "사건 ID",
+                  "window_end_ms (lastNotNull)": "이상 구간 종료",
+                  "attack_evidence (lastNotNull)": "공격 근거",
+                  "benign_evidence (lastNotNull)": "정상 동작·오탐 가능성",
+                  "unknowns (lastNotNull)": "미확인 원인·분석 한계"
+                },
+                "indexByName": {
+                  "incident_id": 4,
+                  "window_end_ms (lastNotNull)": 0,
+                  "attack_evidence (lastNotNull)": 1,
+                  "benign_evidence (lastNotNull)": 2,
+                  "unknowns (lastNotNull)": 3
+                },
+                "excludeByName": {
+                  "incident_id": true,
+                  "review_state (lastNotNull)": true
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "검토 완료 기록 없음",
+              "decimals": 0,
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "wrapText": true,
+                "minWidth": 70
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "이상 구간 종료"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "dateTimeAsIso"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 165
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "lg",
+            "sortBy": [
+              {
+                "displayName": "이상 구간 종료",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": 22,
+          "type": "table",
+          "title": "레플리카별 지목 · 지속 / 해제 / 관측 중단",
+          "datasource": {
+            "type": "loki",
+            "uid": "hycad-loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 60,
+            "w": 24,
+            "h": 8
+          },
+          "timeFrom": "7d",
+          "description": "최근 7일의 사건별 마지막 기록입니다. 전체 이상 규칙으로 지목된 대상과 해당 레플리카 자신의 A/B 임계값 초과를 구분합니다. 연속 지목 시간은 유효한 지목 창의 합이며 정상·수집 공백을 더하지 않습니다. 과거 기록에 초과 필드가 없으면 미기록으로 표시합니다.",
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "hycad-loki"
+              },
+              "expr": "{job=\"hycad-incidents\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "queryType": "range",
+              "editorMode": "code",
+              "direction": "backward",
+              "maxLines": 2000
+            }
+          ],
+          "transformations": [
+            {
+              "id": "extractFields",
+              "options": {
+                "source": "Line",
+                "format": "json",
+                "replace": true
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "processed_at",
+                    "desc": false
+                  }
+                ]
+              }
+            },
+            {
+              "id": "groupBy",
+              "options": {
+                "fields": {
+                  "last_seen_ms": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "replica": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "model_status_label": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "current_replica_trigger": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "state": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "observed_seconds": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "windows": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "incident_id": {
+                    "operation": "groupby",
+                    "aggregations": []
+                  }
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "renameByName": {
+                  "incident_id": "사건 ID",
+                  "last_seen_ms (lastNotNull)": "최종 관측",
+                  "replica (lastNotNull)": "레플리카",
+                  "model_status_label (lastNotNull)": "모델 분류",
+                  "current_replica_trigger (lastNotNull)": "이 레플리카의 초과 여부",
+                  "state (lastNotNull)": "마지막 관측 상태",
+                  "observed_seconds (lastNotNull)": "연속 지목 시간",
+                  "windows (lastNotNull)": "30초 창 수"
+                },
+                "indexByName": {
+                  "incident_id": 7,
+                  "last_seen_ms (lastNotNull)": 0,
+                  "replica (lastNotNull)": 1,
+                  "model_status_label (lastNotNull)": 2,
+                  "current_replica_trigger (lastNotNull)": 3,
+                  "state (lastNotNull)": 4,
+                  "observed_seconds (lastNotNull)": 5,
+                  "windows (lastNotNull)": 6
+                },
+                "excludeByName": {
+                  "incident_id": true
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "미기록 · 미확인",
+              "decimals": 0,
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "wrapText": true,
+                "minWidth": 70
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "최종 관측"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "dateTimeAsIso"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 165
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "레플리카"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 125
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "모델 분류"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 140
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "이 레플리카의 초과 여부"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 290
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "마지막 관측 상태"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 170
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "연속 지목 시간"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "30초 창 수"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 95
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "연속 지목 시간"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "s"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "lg",
+            "sortBy": [
+              {
+                "displayName": "최종 관측",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": 23,
+          "title": "조사 자료 보존 · 전후 이벤트 / 연결 정보 / 서비스 로그",
+          "type": "table",
+          "datasource": {
+            "type": "loki",
+            "uid": "hycad-loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 68,
+            "w": 24,
+            "h": 7
+          },
+          "description": "최근 7일 보존 기록을 조회합니다. 외부 호스트의 evidence 디렉터리에 보호된 원문을 저장합니다. 최초 이상 구간 전60초·후60초, 지속 이상은120초마다 추가 보존합니다. complete도 실제 원인 확정을 뜻하지 않습니다. 이전 사건의 원본은 소급 복구하지 않습니다.",
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "hycad-loki"
+              },
+              "expr": "{job=\"hycad-evidence\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "queryType": "range",
+              "editorMode": "code",
+              "direction": "backward",
+              "maxLines": 1000
+            }
+          ],
+          "transformations": [
+            {
+              "id": "extractFields",
+              "options": {
+                "source": "Line",
+                "format": "json",
+                "replace": true
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "updated_at",
+                    "desc": false
+                  }
+                ]
+              }
+            },
+            {
+              "id": "groupBy",
+              "options": {
+                "fields": {
+                  "replicas": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "state": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "pre_events": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "post_events": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "service_logs": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "location": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "limitation": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  },
+                  "incident_id": {
+                    "operation": "groupby",
+                    "aggregations": []
+                  },
+                  "window_end_ms": {
+                    "operation": "aggregate",
+                    "aggregations": [
+                      "lastNotNull"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "renameByName": {
+                  "incident_id": "사건 ID",
+                  "replicas (lastNotNull)": "대상 레플리카",
+                  "state (lastNotNull)": "보존 상태",
+                  "pre_events (lastNotNull)": "이전·이상 이벤트 수",
+                  "post_events (lastNotNull)": "이후 이벤트 수",
+                  "service_logs (lastNotNull)": "서비스 로그",
+                  "location (lastNotNull)": "보존 폴더 ID",
+                  "limitation (lastNotNull)": "보존 한계",
+                  "window_end_ms (lastNotNull)": "보존 기준 시각"
+                },
+                "indexByName": {
+                  "incident_id": 0,
+                  "replicas (lastNotNull)": 1,
+                  "state (lastNotNull)": 2,
+                  "pre_events (lastNotNull)": 3,
+                  "post_events (lastNotNull)": 4,
+                  "service_logs (lastNotNull)": 5,
+                  "location (lastNotNull)": 6,
+                  "limitation (lastNotNull)": 7,
+                  "window_end_ms (lastNotNull)": 0
+                },
+                "excludeByName": {
+                  "incident_id": true,
+                  "location (lastNotNull)": true
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "기록 없음 · 정상으로 해석하지 않음",
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "wrapText": true
+              },
+              "decimals": 0
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "보존 상태"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "queued": {
+                            "text": "보존 시작"
+                          },
+                          "waiting_for_post": {
+                            "text": "이후 구간 수집 중"
+                          },
+                          "complete": {
+                            "text": "보존 완료"
+                          },
+                          "limited": {
+                            "text": "일부 누락·한도 확인"
+                          },
+                          "interrupted": {
+                            "text": "보존 중단"
+                          },
+                          "expired": {
+                            "text": "보관 한도로 삭제됨"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "보존 기준 시각"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "dateTimeAsIso"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "이전·이상 이벤트 수"
+                },
+                "properties": [
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  },
+                  {
+                    "id": "unit",
+                    "value": "locale"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 145
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "이후 이벤트 수"
+                },
+                "properties": [
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  },
+                  {
+                    "id": "unit",
+                    "value": "locale"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "보존 기준 시각"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 165
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "대상 레플리카"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 190
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "보존 상태"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 150
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "md",
+            "sortBy": [
+              {
+                "displayName": "보존 기준 시각",
+                "desc": true
+              }
+            ]
+          },
+          "timeFrom": "7d"
+        },
+        {
+          "id": 21,
+          "title": "판정 근거 상세 · 행을 펼쳐 확인",
+          "type": "logs",
+          "datasource": {
+            "type": "loki",
+            "uid": "hycad-loki"
+          },
+          "description": "한 행을 펼치면 원본 윈도 시각, 제어기 분기, A 특성별 기여, 레플리카별 비교 근거와 B 편차를 확인할 수 있습니다. JSON 본문은 저장된 판정 근거이며 로그 스트림 레이블로 사용하지 않습니다. 입력 부족도 그대로 기록합니다. 표시할 로그가 없으면 근거 없음이며, 침해 여부의 결론이 아닙니다.",
+          "gridPos": {
+            "x": 0,
+            "y": 75,
+            "w": 24,
+            "h": 9
+          },
+          "maxDataPoints": 30,
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "분석 기록 없음 · 정상 또는 이상으로 해석하지 않습니다"
+            },
+            "overrides": []
+          },
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "showCommonLabels": false,
+            "wrapLogMessage": false,
+            "prettifyLogMessage": false,
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "sortOrder": "Descending"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "hycad-loki"
+              },
+              "expr": "{job=\"hycad-decisions\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "queryType": "range",
+              "editorMode": "code",
+              "maxLines": 30,
+              "direction": "backward"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "deployment",
+        "label": "서비스",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "hycad-prometheus"
+        },
+        "definition": "label_values(hycad_window_seconds{job=\"hycad\"}, deployment)",
+        "query": {
+          "query": "label_values(hycad_window_seconds{job=\"hycad\"}, deployment)",
+          "refId": "VariableQuery-deployment"
+        },
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": false,
+        "hide": 0,
+        "skipUrlSync": false,
+        "options": [],
+        "current": {},
+        "regex": ""
+      },
+      {
+        "name": "mode",
+        "label": "모드",
+        "type": "custom",
+        "query": "LIVE : live, 캡처 재생 : replay",
+        "options": [
+          {
+            "text": "LIVE",
+            "value": "live",
+            "selected": true
+          },
+          {
+            "text": "캡처 재생",
+            "value": "replay",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "LIVE",
+          "value": "live"
+        },
+        "multi": false,
+        "includeAll": false,
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "name": "capture",
+        "label": "입력 캡처",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "hycad-prometheus"
+        },
+        "definition": "label_values(hycad_window_seconds{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\"}, capture)",
+        "query": {
+          "query": "label_values(hycad_window_seconds{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\"}, capture)",
+          "refId": "VariableQuery-capture"
+        },
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": false,
+        "hide": 0,
+        "skipUrlSync": false,
+        "options": [],
+        "current": {},
+        "regex": ""
+      }
+    ]
+  }
+}

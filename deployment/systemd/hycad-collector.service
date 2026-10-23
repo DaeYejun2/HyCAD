@@ -1,0 +1,47 @@
+[Unit]
+Description=HyCAD reconnecting SSH event collector
+Wants=network-online.target hycad-monitor.service
+After=network-online.target hycad-monitor.service
+# Keep collecting through a Docker restart or an initial stack start failure.
+# For maintenance, explicitly stop both HyCAD units.
+RequiresMountsFor=/opt/hycad/current /var/lib/hycad/live
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+User=hycad
+Group=hycad-data
+WorkingDirectory=/opt/hycad/current
+Environment=TARGET_PORT=22
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/etc/hycad/monitor.env
+# The collector needs only target configuration, never the Grafana admin secret.
+UnsetEnvironment=GRAFANA_ADMIN_PASSWORD
+ExecStart=/usr/bin/python3 /opt/hycad/current/scripts/collect_service.py --host ${TARGET_HOST} --port ${TARGET_PORT} --identity /etc/hycad/collector_ed25519 --known-hosts /etc/hycad/known_hosts --output /var/lib/hycad/live/events.jsonl --max-mib 256 --file-mode 0640 --retry-seconds 2 --idle-seconds 90 --health-file /var/lib/hycad/live/collector-health.json
+Restart=always
+RestartSec=5s
+TimeoutStopSec=20s
+KillMode=control-group
+UMask=0027
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=/var/lib/hycad/live
+ReadOnlyPaths=/opt/hycad/current /etc/hycad/collector_ed25519 /etc/hycad/known_hosts
+InaccessiblePaths=/etc/hycad/monitor.env
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+MemoryMax=256M
+TasksMax=64
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hycad-collector
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=100
+
+[Install]
+WantedBy=multi-user.target

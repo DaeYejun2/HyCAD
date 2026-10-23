@@ -1,0 +1,59 @@
+name: hycad-monitor
+services:
+  detector:
+    build:
+      context: .
+      dockerfile: Dockerfile.monitor
+    command: ["--mode", "replay", "--bind", "0.0.0.0", "--loop", "--interval", "5", "--replay", "cache/cat_1of4.pkl", "cache/cat_4of4.pkl"]
+    environment:
+      HYCAD_LOKI_URL: http://loki:3100/loki/api/v1/push
+    ports: ["127.0.0.1:9108:9108"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9108/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=7d", "--storage.tsdb.retention.size=2GB"]
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    restart: unless-stopped
+  grafana:
+    image: grafana/grafana:13.2.4
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Run python3 scripts/setup_local.py first}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/hycad-overview.json
+      GF_DASHBOARDS_MIN_REFRESH_INTERVAL: 5s
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports: ["127.0.0.1:3000:3000"]
+    restart: unless-stopped
+  loki:
+    image: grafana/loki:3.7.9
+    command: ["-config.file=/etc/loki/config.yml"]
+    volumes:
+      - ./monitoring/loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    ports: ["127.0.0.1:3100:3100"]
+    restart: unless-stopped
+volumes:
+  prometheus-data:
+  grafana-data:
+  loki-data:

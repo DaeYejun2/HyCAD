@@ -1,0 +1,6 @@
+#!/bin/sh
+# Install root-owned, mode 0755. This command accepts no caller arguments.
+set -eu
+[ "$#" -eq 0 ] || exit 64
+exec /usr/bin/flock --nonblock --no-fork /run/lock/hycad-catalogue.lock \
+  /usr/bin/python3 /usr/local/libexec/hycad-serve-capture.py

@@ -1,0 +1,38 @@
+[Unit]
+Description=HyCAD front-end bounded incident evidence preservation
+Wants=network-online.target hycad-monitor.service hycad-collector.service
+After=network-online.target hycad-monitor.service
+RequiresMountsFor=/var/snap/docker/common/hycad/current /var/snap/docker/common/hycad/live /var/snap/docker/common/hycad/evidence-frontend
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+User=hycad
+Group=hycad-data
+WorkingDirectory=/var/snap/docker/common/hycad/current
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=TARGET_PORT=22
+EnvironmentFile=/etc/hycad/monitor.env
+UnsetEnvironment=GRAFANA_ADMIN_PASSWORD
+ExecStart=/usr/bin/python3 /var/snap/docker/common/hycad/current/scripts/preserve_incidents.py --host ${TARGET_HOST} --port ${TARGET_PORT} --identity /etc/hycad/context_ed25519 --known-hosts /etc/hycad/known_hosts --events /var/snap/docker/common/hycad/live/events.jsonl --root /var/snap/docker/common/hycad/evidence-frontend --status-url http://127.0.0.1:9109/status --health-path /var/snap/docker/common/hycad/live/frontend-evidence-health.json
+Restart=always
+RestartSec=5s
+TimeoutStopSec=120s
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=/var/snap/docker/common/hycad/evidence-frontend /var/snap/docker/common/hycad/live
+ReadOnlyPaths=/var/snap/docker/common/hycad/current /etc/hycad/context_ed25519 /etc/hycad/known_hosts
+InaccessiblePaths=/etc/hycad/monitor.env
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=384M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+[ "$#" -eq 0 ] || exit 64
+# Catalogue and front-end evidence workers may request the same interval.
+# Wait briefly for their shared read-only context slot without exceeding SSH's
+# 100-second budget (5-second wait plus the Python collector's 85-second limit).
+exec /usr/bin/flock --wait 5 --no-fork /run/lock/hycad-context.lock /usr/bin/python3 /usr/local/libexec/hycad-serve-context.py

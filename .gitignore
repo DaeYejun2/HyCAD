@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+work/
+data/
+*.log
+
+# Private operational data and generated artifacts
+Grafana_caps/
+captures/
+*.scap
+*.jsonl
+*.jsonl.gz
+*.pem
+*.key

@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  evaluation_interval: 5s
+
+rule_files:
+  - /etc/prometheus/rules.yml
+
+scrape_configs:
+  - job_name: hycad
+    honor_labels: true
+    static_configs:
+      - targets: [detector:9108]
+        labels:
+          mode: live
+          deployment: catalogue
+      - targets: [detector-frontend:9108]
+        labels:
+          mode: live
+          deployment: front-end
+      - targets: [capture-replay:9110]
+        labels:
+          mode: replay
+
+  - job_name: hycad-manual
+    honor_labels: true
+    scrape_interval: 1s
+    scrape_timeout: 1s
+    static_configs:
+      - targets: [replay-control:9111]
+        labels:
+          mode: replay
+
+# The target label preserves the expected live mode on `up` when the exporter
+# is unavailable. Keep this file paired with the live detector configuration.
+# No external notification destination is configured.

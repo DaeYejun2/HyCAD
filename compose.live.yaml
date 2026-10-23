@@ -1,0 +1,7 @@
+services:
+  detector:
+    command: ["--mode", "live", "--bind", "0.0.0.0", "--baseline", "/data/baseline.pkl", "--events", "/data/events.jsonl", "--deployment", "${HYCAD_DEPLOYMENT:-catalogue}"]
+    volumes:
+      - ${HYCAD_DATA_DIR:?Set HYCAD_DATA_DIR to your validated live data directory}:/data:ro
+  prometheus:
+    command: ["--config.file=/etc/prometheus/prometheus.live.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=7d", "--storage.tsdb.retention.size=2GB"]

@@ -1,0 +1,29 @@
+[Unit]
+Description=HyCAD live monitoring stack
+Wants=network-online.target
+Requires=docker.service
+After=network-online.target docker.service
+PartOf=docker.service
+RequiresMountsFor=/opt/hycad/current /var/lib/hycad/live
+StartLimitIntervalSec=0
+
+[Service]
+# This unit starts the stack at boot; Docker owns individual container restarts.
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/hycad/current
+EnvironmentFile=/etc/hycad/monitor.env
+ExecStartPre=/usr/bin/test -r /var/lib/hycad/live/baseline.pkl
+ExecStart=/usr/bin/docker compose --project-directory /opt/hycad/current --env-file /etc/hycad/monitor.env -f /opt/hycad/current/compose.yaml -f /opt/hycad/current/compose.server.yaml up --detach --no-build --remove-orphans
+ExecStop=/usr/bin/docker compose --project-directory /opt/hycad/current --env-file /etc/hycad/monitor.env -f /opt/hycad/current/compose.yaml -f /opt/hycad/current/compose.server.yaml stop --timeout 30
+Restart=on-failure
+RestartSec=15s
+TimeoutStartSec=180s
+TimeoutStopSec=90s
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hycad-monitor
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+# HTTPS gateway override; never publish Grafana, Prometheus or Loki ports here.
+# Use only after creating the Viewer account and setting a verified public URL.
+services:
+  grafana:
+    environment:
+      GF_SERVER_ROOT_URL: ${HYCAD_PUBLIC_URL:?Set the verified external HTTPS URL}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_PROXY_ENABLED: "false"
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: lax
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_ALLOW_ORG_CREATE: "false"
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Viewer
+      GF_USERS_VIEWERS_CAN_EDIT: "false"

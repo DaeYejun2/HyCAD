@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly check for HyCAD short-lived TLS certificate renewal
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=yes
+Unit=hycad-cert-renew.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,12 @@
+apiVersion: 1
+providers:
+  - name: HyCAD
+    orgId: 1
+    folder: HyCAD
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 10
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

@@ -1,0 +1,6 @@
+# Start native detector first; this profile keeps the in-container one disabled.
+services:
+  detector:
+    profiles: ["container-detector"]
+  prometheus:
+    command: ["--config.file=/etc/prometheus/prometheus.ssh.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=7d", "--storage.tsdb.retention.size=2GB"]

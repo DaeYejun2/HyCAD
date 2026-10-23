@@ -1,0 +1,71 @@
+groups:
+  - name: hycad_status
+    interval: 5s
+    rules:
+      - record: hycad:ready:current
+        expr: hycad_ready and on (job, instance) (up{job="hycad"} == 1)
+
+      # Preserve the original one-hot metrics; this code is for visualization.
+      # 0 normal, 1 partial, 2 all, 3 drift, 4 insufficient. A missing or expired
+      # result is deliberately absent, never converted into normal (0).
+      - record: hycad:verdict_code:current
+        expr: |
+          sum without (verdict) (
+            (hycad_verdict{verdict="normal"} * 0)
+            or (hycad_verdict{verdict="partial_infection"} * 1)
+            or (hycad_verdict{verdict="all_infection"} * 2)
+            or (hycad_verdict{verdict="drift"} * 3)
+            or (hycad_verdict{verdict="insufficient_data"} * 4)
+          )
+          and on (deployment, mode, capture, job, instance) (hycad:ready:current == 1)
+
+      - record: hycad:result_age_seconds
+        expr: clamp_min(time() - hycad_last_result_timestamp_seconds, 0)
+
+  - name: hycad_live_alerts
+    interval: 5s
+    rules:
+      - alert: HyCADPartialInfection
+        expr: |
+          (hycad_verdict{mode="live", verdict="partial_infection"} == 1)
+          and on (deployment, mode, capture, job, instance) (hycad:ready:current == 1)
+        labels:
+          severity: warning
+        annotations:
+          summary: "HyCAD 부분 이상 의심"
+          description: "{{ $labels.deployment }}: 최신 유효 윈도에서 일부 레플리카가 이상으로 지목됐습니다. 레플리카별 A 점수와 입력을 확인하세요."
+
+      - alert: HyCADAllInfection
+        expr: |
+          (hycad_verdict{mode="live", verdict="all_infection"} == 1)
+          and on (deployment, mode, capture, job, instance) (hycad:ready:current == 1)
+        labels:
+          severity: critical
+        annotations:
+          summary: "HyCAD 전체 이상 의심"
+          description: "{{ $labels.deployment }}: A 침묵, B 이상 및 C 변동 조건이 충족됐습니다. 모델 판정이며 실제 침해 여부는 원본 근거로 확인하세요."
+
+      - alert: HyCADDrift
+        expr: |
+          (hycad_verdict{mode="live", verdict="drift"} == 1)
+          and on (deployment, mode, capture, job, instance) (hycad:ready:current == 1)
+        labels:
+          severity: info
+        annotations:
+          summary: "HyCAD 드리프트 판정"
+          description: "{{ $labels.deployment }}: A 침묵, B 이상 및 C 안정 조건이 충족됐습니다. 배포 변경과 기준선을 검토하세요."
+
+      - alert: HyCADLiveDataUnavailable
+        expr: |
+          (hycad_ready{mode="live"} == 0)
+          or (up{job="hycad", mode="live"} == 0)
+          or (
+            (up{job="hycad", mode="live"} == 1)
+            unless on (job, instance) hycad_ready{mode="live"}
+          )
+        for: 90s
+        labels:
+          severity: warning
+        annotations:
+          summary: "HyCAD 실시간 데이터 사용 불가"
+          description: "{{ $labels.instance }}: 90초 동안 유효한 실시간 판정을 사용할 수 없습니다. 탐지기 연결, 입력 파일 갱신, 전체 레플리카 윈도 및 수집 시각을 확인하세요."

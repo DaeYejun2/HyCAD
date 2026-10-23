@@ -1,0 +1,596 @@
+# Run: promtool test rules rules.test.yml
+# These tests exercise alert isolation and no-data/stale behavior.
+rule_files:
+  - "rules.yml"
+evaluation_interval: "5s"
+group_eval_order:
+  - "hycad_status"
+  - "hycad_live_alerts"
+tests:
+  - name: "live partial infection"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"live\"}"
+        values: "1x24"
+      - series: "hycad_ready{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"normal\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"partial_infection\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"all_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"drift\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"insufficient_data\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts:
+          - exp_labels:
+              deployment: "demo"
+              mode: "live"
+              job: "hycad"
+              instance: "detector:9108"
+              severity: "warning"
+              verdict: "partial_infection"
+            exp_annotations:
+              summary: "HyCAD 부분 이상 의심"
+              description: "demo: 최신 유효 윈도에서 일부 레플리카가 이상으로 지목됐습니다. 레플리카별 A 점수와 입력을 확인하세요."
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts: []
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples:
+          - labels: "hycad:verdict_code:current{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+            value: 1
+  - name: "live all infection"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"live\"}"
+        values: "1x24"
+      - series: "hycad_ready{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"normal\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"partial_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"all_infection\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"drift\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"insufficient_data\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts:
+          - exp_labels:
+              deployment: "demo"
+              mode: "live"
+              job: "hycad"
+              instance: "detector:9108"
+              severity: "critical"
+              verdict: "all_infection"
+            exp_annotations:
+              summary: "HyCAD 전체 이상 의심"
+              description: "demo: A 침묵, B 이상 및 C 변동 조건이 충족됐습니다. 모델 판정이며 실제 침해 여부는 원본 근거로 확인하세요."
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts: []
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples:
+          - labels: "hycad:verdict_code:current{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+            value: 2
+  - name: "live drift"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"live\"}"
+        values: "1x24"
+      - series: "hycad_ready{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"normal\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"partial_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"all_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"drift\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"insufficient_data\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts:
+          - exp_labels:
+              deployment: "demo"
+              mode: "live"
+              job: "hycad"
+              instance: "detector:9108"
+              severity: "info"
+              verdict: "drift"
+            exp_annotations:
+              summary: "HyCAD 드리프트 판정"
+              description: "demo: A 침묵, B 이상 및 C 안정 조건이 충족됐습니다. 배포 변경과 기준선을 검토하세요."
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts: []
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples:
+          - labels: "hycad:verdict_code:current{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+            value: 3
+  - name: "live normal"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"live\"}"
+        values: "1x24"
+      - series: "hycad_ready{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"normal\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"partial_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"all_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"drift\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"insufficient_data\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts: []
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples:
+          - labels: "hycad:verdict_code:current{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+            value: 0
+  - name: "expired live verdict is not healthy"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"live\"}"
+        values: "1x24"
+      - series: "hycad_ready{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"normal\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"partial_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"all_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"drift\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"insufficient_data\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts:
+          - exp_labels:
+              deployment: "demo"
+              mode: "live"
+              job: "hycad"
+              instance: "detector:9108"
+              severity: "warning"
+            exp_annotations:
+              summary: "HyCAD 실시간 데이터 사용 불가"
+              description: "detector:9108: 90초 동안 유효한 실시간 판정을 사용할 수 없습니다. 탐지기 연결, 입력 파일 갱신, 전체 레플리카 윈도 및 수집 시각을 확인하세요."
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples: []
+  - name: "expired infection does not alert"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"live\"}"
+        values: "1x24"
+      - series: "hycad_ready{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"normal\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"partial_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"all_infection\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"drift\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"insufficient_data\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts:
+          - exp_labels:
+              deployment: "demo"
+              mode: "live"
+              job: "hycad"
+              instance: "detector:9108"
+              severity: "warning"
+            exp_annotations:
+              summary: "HyCAD 실시간 데이터 사용 불가"
+              description: "detector:9108: 90초 동안 유효한 실시간 판정을 사용할 수 없습니다. 탐지기 연결, 입력 파일 갱신, 전체 레플리카 윈도 및 수집 시각을 확인하세요."
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples: []
+  - name: "replay infection is not a live alert"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"replay\"}"
+        values: "1x24"
+      - series: "hycad_ready{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"normal\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"partial_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"all_infection\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"drift\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"insufficient_data\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts: []
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples:
+          - labels: "hycad:verdict_code:current{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\"}"
+            value: 2
+  - name: "expired replay does not notify"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"replay\"}"
+        values: "1x24"
+      - series: "hycad_ready{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"normal\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"partial_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"all_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"drift\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"replay\",job=\"hycad\",instance=\"detector:9108\",verdict=\"insufficient_data\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts: []
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples: []
+  - name: "live exporter down"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"live\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts:
+          - exp_labels:
+              mode: "live"
+              job: "hycad"
+              instance: "detector:9108"
+              severity: "warning"
+            exp_annotations:
+              summary: "HyCAD 실시간 데이터 사용 불가"
+              description: "detector:9108: 90초 동안 유효한 실시간 판정을 사용할 수 없습니다. 탐지기 연결, 입력 파일 갱신, 전체 레플리카 윈도 및 수집 시각을 확인하세요."
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples: []
+  - name: "live exporter misses readiness metric"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"live\"}"
+        values: "1x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts:
+          - exp_labels:
+              mode: "live"
+              job: "hycad"
+              instance: "detector:9108"
+              severity: "warning"
+            exp_annotations:
+              summary: "HyCAD 실시간 데이터 사용 불가"
+              description: "detector:9108: 90초 동안 유효한 실시간 판정을 사용할 수 없습니다. 탐지기 연결, 입력 파일 갱신, 전체 레플리카 윈도 및 수집 시각을 확인하세요."
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples: []
+  - name: "up down suppresses even retained verdict"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"live\"}"
+        values: "0x24"
+      - series: "hycad_ready{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"normal\"}"
+        values: "1x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"partial_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"all_infection\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"drift\"}"
+        values: "0x24"
+      - series: "hycad_verdict{deployment=\"demo\",mode=\"live\",job=\"hycad\",instance=\"detector:9108\",verdict=\"insufficient_data\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts:
+          - exp_labels:
+              mode: "live"
+              job: "hycad"
+              instance: "detector:9108"
+              severity: "warning"
+            exp_annotations:
+              summary: "HyCAD 실시간 데이터 사용 불가"
+              description: "detector:9108: 90초 동안 유효한 실시간 판정을 사용할 수 없습니다. 탐지기 연결, 입력 파일 갱신, 전체 레플리카 윈도 및 수집 시각을 확인하세요."
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples: []
+  - name: "replay exporter down"
+    interval: "5s"
+    input_series:
+      - series: "up{job=\"hycad\",instance=\"detector:9108\",mode=\"replay\"}"
+        values: "0x24"
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts: []
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples: []
+
+  # One scrape endpoint exports several captures. A healthy capture must not
+  # make another capture's unavailable verdict appear usable.
+  - name: "capture readiness and verdicts stay isolated on one exporter"
+    interval: "5s"
+    input_series:
+      - series: 'up{job="hycad",instance="capture-replay:9110",mode="replay"}'
+        values: "1x24"
+      - series: 'hycad_ready{deployment="catalogue",mode="replay",capture="normal",job="hycad",instance="capture-replay:9110"}'
+        values: "1x24"
+      - series: 'hycad_verdict{deployment="catalogue",mode="replay",capture="normal",job="hycad",instance="capture-replay:9110",verdict="normal"}'
+        values: "1x24"
+      - series: 'hycad_ready{deployment="catalogue",mode="replay",capture="partial",job="hycad",instance="capture-replay:9110"}'
+        values: "1x24"
+      - series: 'hycad_verdict{deployment="catalogue",mode="replay",capture="partial",job="hycad",instance="capture-replay:9110",verdict="partial_infection"}'
+        values: "1x24"
+      - series: 'hycad_ready{deployment="catalogue",mode="replay",capture="unavailable",job="hycad",instance="capture-replay:9110"}'
+        values: "0x24"
+      - series: 'hycad_verdict{deployment="catalogue",mode="replay",capture="unavailable",job="hycad",instance="capture-replay:9110",verdict="all_infection"}'
+        values: "1x24"
+      - series: 'hycad_ready{deployment="front-end",mode="replay",capture="version-change",job="hycad",instance="capture-replay:9110"}'
+        values: "1x24"
+      - series: 'hycad_verdict{deployment="front-end",mode="replay",capture="version-change",job="hycad",instance="capture-replay:9110",verdict="drift"}'
+        values: "1x24"
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples:
+          - labels: 'hycad:verdict_code:current{deployment="catalogue",mode="replay",capture="normal",job="hycad",instance="capture-replay:9110"}'
+            value: 0
+          - labels: 'hycad:verdict_code:current{deployment="catalogue",mode="replay",capture="partial",job="hycad",instance="capture-replay:9110"}'
+            value: 1
+          - labels: 'hycad:verdict_code:current{deployment="front-end",mode="replay",capture="version-change",job="hycad",instance="capture-replay:9110"}'
+            value: 3
+      - expr: 'hycad:verdict_code:current{capture="unavailable"}'
+        eval_time: "120s"
+        exp_samples: []
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts: []
+
+  # Deliberately share instance/capture to prove deployment is part of the
+  # matching key; distinct production ports must not be the only isolation.
+  - name: "live catalogue readiness cannot validate unavailable frontend"
+    interval: "5s"
+    input_series:
+      - series: 'up{job="hycad",instance="shared:9108",mode="live"}'
+        values: "1x24"
+      - series: 'hycad_ready{deployment="catalogue",mode="live",capture="live",job="hycad",instance="shared:9108"}'
+        values: "1x24"
+      - series: 'hycad_verdict{deployment="catalogue",mode="live",capture="live",job="hycad",instance="shared:9108",verdict="normal"}'
+        values: "1x24"
+      - series: 'hycad_ready{deployment="front-end",mode="live",capture="live",job="hycad",instance="shared:9108"}'
+        values: "0x24"
+      - series: 'hycad_verdict{deployment="front-end",mode="live",capture="live",job="hycad",instance="shared:9108",verdict="drift"}'
+        values: "1x24"
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples:
+          - labels: 'hycad:verdict_code:current{deployment="catalogue",mode="live",capture="live",job="hycad",instance="shared:9108"}'
+            value: 0
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts:
+          - exp_labels:
+              deployment: "front-end"
+              mode: "live"
+              capture: "live"
+              job: "hycad"
+              instance: "shared:9108"
+              severity: "warning"
+            exp_annotations:
+              summary: "HyCAD 실시간 데이터 사용 불가"
+              description: "shared:9108: 90초 동안 유효한 실시간 판정을 사용할 수 없습니다. 탐지기 연결, 입력 파일 갱신, 전체 레플리카 윈도 및 수집 시각을 확인하세요."
+
+  - name: "manual job cannot enter automatic recordings or live alerts"
+    interval: "5s"
+    input_series:
+      - series: 'up{job="hycad",instance="replay:9110",mode="replay"}'
+        values: "1x24"
+      - series: 'up{job="hycad-manual",instance="replay:9110",mode="replay"}'
+        values: "1x24"
+      - series: 'hycad_ready{deployment="catalogue",mode="replay",capture="same-capture",job="hycad",instance="replay:9110"}'
+        values: "1x24"
+      - series: 'hycad_verdict{deployment="catalogue",mode="replay",capture="same-capture",job="hycad",instance="replay:9110",verdict="partial_infection"}'
+        values: "1x24"
+      - series: 'hycad_ready{deployment="catalogue",mode="replay",capture="same-capture",job="hycad-manual",instance="replay:9110"}'
+        values: "1x24"
+      - series: 'hycad_verdict{deployment="catalogue",mode="replay",capture="same-capture",job="hycad-manual",instance="replay:9110",verdict="all_infection"}'
+        values: "1x24"
+    promql_expr_test:
+      - expr: "hycad:verdict_code:current"
+        eval_time: "120s"
+        exp_samples:
+          - labels: 'hycad:verdict_code:current{deployment="catalogue",mode="replay",capture="same-capture",job="hycad",instance="replay:9110"}'
+            value: 1
+      - expr: 'hycad:ready:current{job="hycad-manual"}'
+        eval_time: "120s"
+        exp_samples: []
+    alert_rule_test:
+      - eval_time: "120s"
+        alertname: "HyCADPartialInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADAllInfection"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADDrift"
+        exp_alerts: []
+      - eval_time: "120s"
+        alertname: "HyCADLiveDataUnavailable"
+        exp_alerts: []

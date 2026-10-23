@@ -1,0 +1,9 @@
+# Local replay fallback. Do not combine with live/server overrides.
+# Keeps the Mac's permanent server dashboard tunnel on localhost:3000 free.
+# Stop an older local hycad-monitor stack first: the other local ports remain
+# 9108 (detector), 9090 (Prometheus), and 3100 (Loki).
+name: hycad-presentation
+services:
+  grafana:
+    ports: !override
+      - "127.0.0.1:13000:3000"

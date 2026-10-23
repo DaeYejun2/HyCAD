@@ -1,0 +1,13 @@
+# Mac SSH bridge: native detector reads the host file without Docker share lag.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+rule_files:
+  - /etc/prometheus/rules.yml
+scrape_configs:
+  - job_name: hycad
+    honor_labels: true
+    static_configs:
+      - targets: ["host.docker.internal:9109"]
+        labels:
+          mode: live

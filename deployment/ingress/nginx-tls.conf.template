@@ -1,0 +1,61 @@
+# Render only the two @@...@@ placeholders; preserve all nginx $variables.
+map $http_upgrade $hycad_connection_upgrade {
+    default upgrade;
+    '' close;
+}
+log_format hycad_public '$remote_addr [$time_local] "$request_method $uri $server_protocol" $status $body_bytes_sent';
+resolver 127.0.0.11 valid=30s ipv6=off;
+server {
+    listen 80 default_server;
+    server_name @@PUBLIC_HOST@@;
+    server_tokens off;
+    access_log /var/log/nginx/access.log hycad_public;
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+    location / {
+        return 308 https://@@PUBLIC_HOST@@$request_uri;
+    }
+}
+server {
+    listen 443 ssl default_server;
+    server_name @@PUBLIC_HOST@@;
+    server_tokens off;
+    access_log /var/log/nginx/access.log hycad_public;
+    ssl_certificate /etc/letsencrypt/live/@@CERT_NAME@@/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/@@CERT_NAME@@/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:hycad_tls:10m;
+    ssl_session_timeout 1d;
+    add_header X-Content-Type-Options nosniff always;
+    client_max_body_size 10m;
+    location ^~ /hycad/replay/ {
+        # This backend validates the Grafana session and CSRF for every action.
+        set $hycad_replay http://replay-control:9111;
+        proxy_pass $hycad_replay$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host @@PUBLIC_HOST@@;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Cookie $http_cookie;
+        client_max_body_size 8k;
+        proxy_read_timeout 15s;
+    }
+    location / {
+        # Resolve Docker DNS after Grafana is recreated; retain path and query.
+        set $hycad_upstream http://grafana:3000;
+        proxy_pass $hycad_upstream$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host @@PUBLIC_HOST@@;
+        proxy_set_header X-Forwarded-Host @@PUBLIC_HOST@@;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Port 443;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $hycad_connection_upgrade;
+        proxy_read_timeout 120s;
+    }
+}

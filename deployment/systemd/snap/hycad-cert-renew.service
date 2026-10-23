@@ -1,0 +1,21 @@
+[Unit]
+Description=Renew HyCAD public TLS certificate and reload HTTPS gateway
+Wants=network-online.target
+Requires=hycad-ingress.service
+After=network-online.target hycad-ingress.service
+RequiresMountsFor=/var/snap/docker/common/hycad/current /var/snap/docker/common/hycad/https
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/snap/docker/common/hycad/current
+EnvironmentFile=/etc/hycad/ingress.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /var/snap/docker/common/hycad/current/scripts/renew_https_certificate.py
+TimeoutStartSec=15min
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+StandardOutput=journal
+StandardError=journal

@@ -1,0 +1,60 @@
+# Optional Tailscale gateway. This starts only the daemon on a fresh state volume;
+# it does not enroll a device or enable public access. See docs/public-access.md.
+# After manual activation, persisted Funnel settings intentionally resume on start.
+services:
+  grafana:
+    environment:
+      # Enrollment alone can expose this namespace to permitted tailnet peers.
+      # Block anonymous access before enrollment, even before the URL is known.
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_PROXY_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_ALLOW_ORG_CREATE: "false"
+      GF_USERS_VIEWERS_CAN_EDIT: "false"
+
+  funnel:
+    image: tailscale/tailscale:v1.104.2
+    # Userspace inbound forwarding sees only Grafana's localhost, not the host's
+    # Prometheus, Loki, detector, SSH, or the VM. Never change this to host mode.
+    network_mode: service:grafana
+    depends_on:
+      grafana:
+        condition: service_started
+        restart: true
+    # Bypass containerboot so no environment variable enrolls or publishes a node.
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        umask 077
+        chmod 0700 /var/lib/tailscale
+        exec /usr/local/bin/tailscaled \
+          --tun=userspace-networking \
+          --statedir=/var/lib/tailscale \
+          --state=/var/lib/tailscale/tailscaled.state \
+          --socket=/var/run/tailscale/tailscaled.sock \
+          --port=0
+    volumes:
+      - funnel-state:/var/lib/tailscale
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=16m,mode=1777
+      - /var/run/tailscale:rw,nosuid,nodev,noexec,size=4m,mode=0700
+    cap_drop: ["ALL"]
+    # No host mounts, published ports, TUN, Docker socket, or extra capabilities.
+    # Do not add no-new-privileges before checking this host's Snap/AppArmor
+    # startup transition; the existing server stack documents that limitation.
+    restart: always
+    stop_grace_period: 30s
+    pids_limit: 128
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "3m"
+        max-file: "2"
+        compress: "true"
+
+volumes:
+  # Contains this gateway's device identity and manually enabled Serve/Funnel
+  # configuration. Keep it private and out of Git and ordinary recovery ZIPs.
+  funnel-state:

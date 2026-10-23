@@ -1,0 +1,175 @@
+# Always-on server override: use with compose.yaml (not compose.live.yaml).
+# Build/pull the images before enabling deployment/systemd/*.service.
+# Runtime values belong in /etc/hycad/monitor.env, outside the checkout.
+x-server-defaults: &server-defaults
+  restart: always
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+      compress: "true"
+  pids_limit: 256
+  stop_grace_period: 30s
+
+services:
+  detector:
+    <<: *server-defaults
+    # The detector is a single Python process with signal handling. Avoid the
+    # host-injected docker-init binary, which this server's Snap policy rejects.
+    init: false
+    # Keep AppArmor's initial profile transition possible under Snap Docker.
+    # The image entrypoint then uses setpriv to set NNP before Python starts.
+    # Reset also works with this server's Compose 2.35.1 when a third/fourth
+    # sharing override is merged; !override [] fails schema validation there.
+    security_opt: !reset []
+    healthcheck:
+      # Runtime healthcheck processes do not inherit PID 1's NNP flag.
+      test: ["CMD", "/usr/bin/setpriv", "--no-new-privs", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9108/healthz')"]
+    command:
+      - --mode
+      - live
+      - --bind
+      - 0.0.0.0
+      - --baseline
+      - /data/baseline.pkl
+      - --events
+      - /data/events.jsonl
+      - --incident-state
+      - /state/episodes.json
+      - --evidence-health
+      - /data/evidence-health.json
+      - --deployment
+      - ${HYCAD_DEPLOYMENT:-catalogue}
+    volumes:
+      - type: bind
+        source: ${HYCAD_DATA_DIR:?Set HYCAD_DATA_DIR=/var/lib/hycad/live in /etc/hycad/monitor.env}
+        target: /data
+        read_only: true
+        bind:
+          create_host_path: false
+      - incident-state:/state
+    # The process remains UID 10001; grant only group read of live input.
+    group_add:
+      - "${HYCAD_DATA_GID:-10001}"
+    mem_limit: 768m
+
+  detector-frontend:
+    <<: *server-defaults
+    image: hycad-monitor-detector:latest
+    init: false
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    command:
+      - --mode
+      - live
+      - --bind
+      - 0.0.0.0
+      - --baseline
+      - /data/frontend-baseline.pkl
+      - --events
+      - /data/events.jsonl
+      - --incident-state
+      - /state/episodes.json
+      - --evidence-health
+      - /data/frontend-evidence-health.json
+      - --deployment
+      - front-end
+      - --reference-description
+      - "Node 4 historical normal reference; current Node 10 requires drift investigation"
+    environment:
+      HYCAD_LOKI_URL: http://loki:3100/loki/api/v1/push
+    volumes:
+      - ${HYCAD_DATA_DIR:?Set HYCAD_DATA_DIR}:/data:ro
+      - frontend-incident-state:/state
+    group_add: ["${HYCAD_DATA_GID:-10001}"]
+    ports: ["127.0.0.1:9109:9108"]
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD", "/usr/bin/setpriv", "--no-new-privs", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9108/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  capture-replay:
+    <<: *server-defaults
+    image: hycad-monitor-detector:latest
+    init: false
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    entrypoint: ["/usr/bin/setpriv", "--no-new-privs", "python", "-m", "hycad_monitor.capture_replay"]
+    command: ["--manifest", "/captures/catalog.json", "--bind", "0.0.0.0", "--port", "9110", "--interval", "5"]
+    environment:
+      HYCAD_LOKI_URL: http://loki:3100/loki/api/v1/push
+    volumes:
+      - ${HYCAD_CAPTURE_DIR:?Set HYCAD_CAPTURE_DIR}:/captures:ro
+    group_add: ["${HYCAD_DATA_GID:-10001}"]
+    ports: ["127.0.0.1:9110:9110"]
+    mem_limit: 1g
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "/usr/bin/setpriv", "--no-new-privs", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9110/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  replay-control:
+    <<: *server-defaults
+    image: hycad-monitor-detector:latest
+    init: false
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    entrypoint: ["/usr/bin/setpriv", "--no-new-privs", "python", "-m", "hycad_monitor.replay_control"]
+    command: ["--manifest", "/captures/catalog.json", "--bind", "0.0.0.0", "--port", "9111"]
+    environment:
+      HYCAD_LOKI_URL: http://loki:3100/loki/api/v1/push
+      HYCAD_PUBLIC_URL: ${HYCAD_PUBLIC_URL:?Set verified public HTTPS URL}
+      HYCAD_GRAFANA_URL: http://grafana:3000
+    volumes:
+      - ${HYCAD_CAPTURE_DIR:?Set HYCAD_CAPTURE_DIR}:/captures:ro
+    group_add: ["${HYCAD_DATA_GID:-10001}"]
+    ports: ["127.0.0.1:9111:9111"]
+    mem_limit: 768m
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "/usr/bin/setpriv", "--no-new-privs", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9111/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  prometheus:
+    <<: *server-defaults
+    command:
+      - --config.file=/etc/prometheus/prometheus.live.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.size=2GB
+    mem_limit: 1g
+
+  grafana:
+    <<: *server-defaults
+    # Keep the base localhost binding. The public deployment also requires
+    # compose.public.yaml, which enforces login and secure HTTPS cookies.
+    environment:
+      # This stack runs exactly one Grafana instance with a local SQLite volume.
+      GF_DATABASE_WAL: "true"
+      GF_DATABASE_HIGH_AVAILABILITY: "false"
+      GF_DATABASE_QUERY_RETRIES: "3"
+      # Leave headroom for memory outside the Go runtime's soft limit.
+      GOMEMLIMIT: 768MiB
+    mem_limit: 1g
+
+  loki:
+    <<: *server-defaults
+    # The provisioned Loki configuration retains decision logs for seven days.
+    mem_limit: 1g
+
+# All published ports and named data volumes are inherited from compose.yaml.
+# No Docker socket, host PID namespace, or privileged access is exposed.
+
+volumes:
+  incident-state:
+  frontend-incident-state:

@@ -1,0 +1,34 @@
+# Snap Docker variant; keep the portable units in the parent directory unchanged.
+# /etc/hycad/monitor.env must set:
+# DOCKER_HOST=unix:///var/snap/docker/common/hycad/docker.sock
+[Unit]
+Description=HyCAD live monitoring stack
+Wants=network-online.target
+Requires=snap.docker.dockerd.service
+After=network-online.target snap.docker.dockerd.service
+PartOf=snap.docker.dockerd.service
+RequiresMountsFor=/var/snap/docker/common/hycad/current /var/snap/docker/common/hycad/live
+StartLimitIntervalSec=0
+
+[Service]
+# This unit starts the stack at boot; Docker owns individual container restarts.
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/var/snap/docker/common/hycad/current
+EnvironmentFile=/etc/hycad/monitor.env
+ExecStartPre=/usr/bin/test ${DOCKER_HOST} = unix:///var/snap/docker/common/hycad/docker.sock
+ExecStartPre=/usr/bin/test -S /var/snap/docker/common/hycad/docker.sock
+ExecStartPre=/usr/bin/test -r /var/snap/docker/common/hycad/live/baseline.pkl
+ExecStart=/usr/bin/docker --host ${DOCKER_HOST} compose --project-directory /var/snap/docker/common/hycad/current --env-file /etc/hycad/monitor.env -f /var/snap/docker/common/hycad/current/compose.yaml -f /var/snap/docker/common/hycad/current/compose.server.yaml up --detach --no-build --remove-orphans
+ExecStop=/usr/bin/docker --host ${DOCKER_HOST} compose --project-directory /var/snap/docker/common/hycad/current --env-file /etc/hycad/monitor.env -f /var/snap/docker/common/hycad/current/compose.yaml -f /var/snap/docker/common/hycad/current/compose.server.yaml stop --timeout 30
+Restart=on-failure
+RestartSec=15s
+TimeoutStartSec=180s
+TimeoutStopSec=90s
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hycad-monitor
+
+[Install]
+WantedBy=multi-user.target

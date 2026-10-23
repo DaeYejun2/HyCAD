@@ -1,0 +1,10 @@
+*
+!requirements-monitor.txt
+!channels.py
+!controller.py
+!preprocess.py
+!hycad_monitor/
+!hycad_monitor/**
+!cache/
+!cache/*.pkl
+**/__pycache__
