@@ -1,8 +1,8 @@
 {
   "id": null,
   "uid": "hycad-overview",
-  "title": "HyCAD · LIVE / 캡처 자동 재생",
-  "description": "LIVE는 현재 Sysdig 입력, 캡처 재생은 저장 자료의 반복 재판정입니다. 30초 창을 판정하고 화면은 5초마다 조회합니다. 이상·normality drift는 모델의 의심이며 원인 확정이 아닙니다.",
+  "title": "HyCAD LIVE / 캡처 자동 재생",
+  "description": "LIVE는 현재 Sysdig 입력, 캡처 재생은 저장 자료의 반복 재판정입니다. 30초 창을 판정하고 화면은 5초마다 조회합니다. 이상 normality drift는 모델의 의심이며 원인 확정이 아닙니다.",
   "tags": [
     "HyCAD",
     "live",
@@ -31,7 +31,7 @@
     },
     {
       "type": "link",
-      "title": "캡처 선택 · 시작/정지 · 배속",
+      "title": "캡처 선택 시작/정지 배속",
       "targetBlank": false,
       "url": "/hycad/replay/"
     }
@@ -39,7 +39,7 @@
   "panels": [
     {
       "id": 1,
-      "title": "판정 흐름 · ${deployment} / ${mode:text} / ${capture}",
+      "title": "판정 흐름",
       "type": "state-timeline",
       "datasource": {
         "type": "prometheus",
@@ -51,10 +51,10 @@
         "w": 24,
         "h": 4
       },
-      "description": "기록 시각의 판정입니다. 캡처 재생의 시간축은 이번 재생 처리 시각이며 원본 캡처 시각은 아래에 별도 표시됩니다. 회색은 불완전·오래된 입력 또는 연결 불가입니다. 정상 변화 의심은 A 침묵·B 초과·C 안정 조건이며 정상 원인이 입증됐다는 뜻은 아닙니다.",
+      "description": "기록 시각의 판정입니다. 캡처 재생의 시간축은 이번 재생 처리 시각이며 원본 캡처 시각은 아래에 별도 표시됩니다. 회색은 불완전 오래된 입력 또는 연결 불가입니다. 정상 변화 의심은 비교 탐지기 침묵 시스템콜 빈도 탐지기 초과 작업량 탐지기 안정 조건이며 정상 원인이 입증됐다는 뜻은 아닙니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "mappings": [
             {
               "type": "value",
@@ -146,7 +146,7 @@
       "description": "전체 이상 의심은 서비스 분류입니다. 실제 임계값 초과 레플리카와 실제 공격 여부는 아래 근거로 구분합니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "unit": "none",
           "decimals": 0,
           "color": {
@@ -236,10 +236,10 @@
         "w": 4,
         "h": 4
       },
-      "description": "모든 레플리카·완전한 30초 창·최신 입력이 필요합니다. HTTP 연결만으로 정상 판정을 표시하지 않습니다.",
+      "description": "모든 레플리카 완전한 30초 창 최신 입력이 필요합니다. HTTP 연결만으로 정상 판정을 표시하지 않습니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "unit": "none",
           "decimals": 0,
           "color": {
@@ -250,7 +250,7 @@
               "type": "value",
               "options": {
                 "-1": {
-                  "text": "연결·선택 확인",
+                  "text": "연결 선택 확인",
                   "color": "gray"
                 },
                 "0": {
@@ -309,7 +309,7 @@
     },
     {
       "id": 4,
-      "title": "B 초과 레플리카",
+      "title": "시스템콜 빈도 탐지기 초과 레플리카",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -321,10 +321,10 @@
         "w": 4,
         "h": 4
       },
-      "description": "현재 창에서 자신의 B 점수가 기준선 임계값을 넘은 레플리카 수입니다. 전체 이상 의심이 곧 4개 모두 초과했다는 뜻은 아닙니다.",
+      "description": "현재 창에서 자신의 시스템콜 빈도 탐지기 점수가 기준선 임계값을 넘은 레플리카 수입니다. 전체 이상 의심이 곧 4개 모두 초과했다는 뜻은 아닙니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "unit": "none",
           "decimals": 0,
           "color": {
@@ -398,10 +398,10 @@
         "w": 5,
         "h": 4
       },
-      "description": "A 침묵 + B 초과 + C 안정일 때만 표시합니다. 버전·부하 등 정상 원인 확인이 필요합니다. 기준선은 고정하며 자동 재학습하지 않습니다.",
+      "description": "비교 탐지기가 지목하지 않고 시스템콜 빈도 탐지기는 초과하며 작업량 탐지기는 안정 범위일 때 표시합니다. 버전이나 부하 등 정상 원인은 별도 확인이 필요합니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "unit": "none",
           "decimals": 0,
           "color": {
@@ -486,7 +486,7 @@
       "description": "캡처 모드에서는 과거 캡처의 시각입니다. LIVE 입력 상태와 혼동하지 않습니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "unit": "dateTimeAsIso",
           "decimals": 0,
           "color": {
@@ -538,7 +538,7 @@
     },
     {
       "id": 7,
-      "title": "A · 레플리카 간 차이 / 임계값",
+      "title": "비교 탐지기",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -550,10 +550,10 @@
         "w": 12,
         "h": 7
       },
-      "description": "1보다 크면 해당 레플리카의 A 임계값 초과입니다. 집합 특성 차이를 비교하며 A 우선 판정 규칙을 적용합니다.",
+      "description": "동일한 30초 구간의 레플리카 간 특성 차이를 비교합니다. 임계값은 유효한 정상 기준선의 모든 구간과 레플리카에서 관측한 비교 점수 최댓값의 2배입니다. 세로축은 점수 / 임계값이며 1보다 크면 초과입니다. 임계값이 0이면 비율은 표시하지 않고 레플리카 표에서 실제 초과를 확인합니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "unit": "none",
           "decimals": 2,
           "color": {
@@ -723,7 +723,7 @@
     },
     {
       "id": 8,
-      "title": "B · 정상 기준선 편차 / 임계값 (로그축)",
+      "title": "시스템콜 빈도 탐지기",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -735,10 +735,10 @@
         "w": 12,
         "h": 7
       },
-      "description": "1보다 크면 B 임계값 초과입니다. 큰 편차와 정상 부근을 함께 보기 위해 로그축을 씁니다. 0은 로그축에서 표시하지 않습니다.",
+      "description": "정상 기준선의 시스템콜 구성비 평균과 표준편차로 z 점수를 계산합니다. 레플리카 점수는 시스템콜별 절댓값 z 점수의 최댓값이고, 임계값은 정상 구간의 모든 레플리카 점수 중 최댓값입니다. 표준편차 하한은 0.00001입니다. 전체 레플리카의 25% 이상이 초과하면 서비스 수준의 빈도 이상 조건을 충족합니다. 세로축은 점수 / 임계값이며 1보다 크면 초과입니다. 로그축이므로 0은 표시되지 않습니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "unit": "none",
           "decimals": 2,
           "color": {
@@ -908,7 +908,7 @@
     },
     {
       "id": 9,
-      "title": "C · 연결 이벤트당 작업량 변화 / 임계값",
+      "title": "작업량 탐지기",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -917,15 +917,16 @@
       "gridPos": {
         "x": 0,
         "y": 15,
-        "w": 9,
-        "h": 7
+        "w": 24,
+        "h": 8
       },
-      "description": "C는 서비스 전체 abs(log2((이벤트/accept 계열 이벤트)/기준값))입니다. 1보다 크면 임계값 초과입니다. HTTP 요청당 비용이나 개별 레플리카 점수가 아닙니다.",
+      "description": "각 선은 한 레플리카의 연결 이벤트당 작업량 변화를 나타내며 모든 레플리카를 함께 표시합니다. 30초 구간의 레플리카별 전체 이벤트 수를 accept와 accept4 이벤트 수로 나눕니다.\n\n실제 판정은 전체 레플리카의 이벤트 합을 연결 이벤트 합으로 나눈 작업량을 사용합니다. 정상 기준 작업량은 유효한 정상 구간에서 얻은 전체 작업량의 중앙값입니다. |log2(전체 작업량 / 정상 기준 작업량)| > 0.20이면 임계값 초과입니다. 0.20은 연구 실험 결과를 검토해 정한 고정값이며 현재 정상 기준선에서 자동 산출한 값은 아닙니다. 이는 정상 기준의 약 0.871배 미만 또는 1.149배 초과에 해당합니다.\n\n그래프의 세로축은 레플리카별 실제 작업량이므로 판정 점수 임계값 0.20을 선으로 표시하지 않습니다. 연결 이벤트는 HTTP 요청 수와 다를 수 있으며, 분모가 0이거나 입력이 불완전한 구간은 표시하지 않습니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "unit": "none",
           "decimals": 2,
+          "min": 0,
           "color": {
             "mode": "palette-classic"
           },
@@ -937,30 +938,109 @@
             "showPoints": "never",
             "spanNulls": false,
             "axisPlacement": "auto",
-            "axisLabel": "점수 / 임계값",
+            "axisLabel": "이벤트 / 연결 이벤트",
             "scaleDistribution": {
               "type": "linear"
             },
             "thresholdsStyle": {
-              "mode": "dashed+area"
+              "mode": "off"
             }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*1$"
+            },
+            "properties": [
               {
-                "color": "transparent",
-                "value": null
-              },
-              {
-                "color": "#C2353D",
-                "value": 1
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0072B2"
+                }
               }
             ]
           },
-          "min": 0
-        },
-        "overrides": []
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*2$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D55E00"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    12,
+                    6
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*3$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#009E73"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    3,
+                    4
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*4$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#CC79A7"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    14,
+                    5,
+                    3,
+                    5
+                  ]
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "tooltip": {
@@ -980,33 +1060,42 @@
             "uid": "hycad-prometheus"
           },
           "editorMode": "code",
-          "expr": "(hycad_channel_c_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} / on(deployment,mode,capture,job,instance) (hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"c\"} > 0)) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)",
+          "expr": "(hycad_window_events{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} / on(deployment,mode,capture,job,instance,replica) (hycad_window_accepts{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} > 0)) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)",
           "refId": "A",
           "range": true,
           "instant": false,
           "format": "time_series",
-          "legendFormat": "C / 임계값"
+          "legendFormat": "{{replica}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^docker-compose_(catalogue|front-end)_([0-9]+)$",
+            "renamePattern": "$1 $2"
+          }
         }
       ]
     },
     {
       "id": 10,
-      "title": "현재 레플리카 · 모델 지목과 실제 초과",
+      "title": "레플리카별 판정",
       "type": "table",
       "datasource": {
         "type": "prometheus",
         "uid": "hycad-prometheus"
       },
       "gridPos": {
-        "x": 9,
-        "y": 15,
-        "w": 15,
-        "h": 7
+        "x": 0,
+        "y": 23,
+        "w": 24,
+        "h": 6
       },
-      "description": "모델 지목과 각 레플리카의 A/B 실제 임계값 초과를 따로 표시합니다. 데이터가 불완전하거나 오래되면 이전 점수를 유지하지 않습니다.",
+      "description": "모델 지목과 각 레플리카의 비교 탐지기/시스템콜 빈도 탐지기 실제 임계값 초과를 따로 표시합니다. 데이터가 불완전하거나 오래되면 이전 점수를 유지하지 않습니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
+          "noValue": "판정 불가 입력 확인",
           "decimals": 2,
           "custom": {
             "align": "auto",
@@ -1050,7 +1139,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "[AB] 실제 초과"
+              "options": "(비교 탐지기|시스템콜 빈도 탐지기) 실제 초과"
             },
             "properties": [
               {
@@ -1225,10 +1314,10 @@
             "renameByName": {
               "replica": "레플리카",
               "Value #A": "모델 지목",
-              "Value #B": "A 실제 초과",
-              "Value #C": "B 실제 초과",
-              "Value #D": "A 배수",
-              "Value #E": "B 배수"
+              "Value #B": "비교 탐지기 실제 초과",
+              "Value #C": "시스템콜 빈도 탐지기 실제 초과",
+              "Value #D": "비교 탐지기 배수",
+              "Value #E": "시스템콜 빈도 탐지기 배수"
             },
             "indexByName": {
               "replica": 0,
@@ -1244,7 +1333,7 @@
     },
     {
       "id": 11,
-      "title": "최근 판단 근거 · 최신 3개 창",
+      "title": "최근 판단 근거",
       "type": "logs",
       "datasource": {
         "type": "loki",
@@ -1252,11 +1341,11 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 29,
         "w": 24,
         "h": 6
       },
-      "description": "완료된 창의 짧은 모델 설명입니다. 처리 시각과 원본 구간을 함께 확인하세요. 공격·정상 원인 검토와 전후 자료는 LIVE 사건 조사에서 확인합니다.",
+      "description": "완료된 창의 짧은 모델 설명입니다. 처리 시각과 원본 구간을 함께 확인하세요. 공격 정상 원인 검토와 전후 자료는 LIVE 사건 조사에서 확인합니다.",
       "fieldConfig": {
         "defaults": {
           "noValue": "해당 입력의 판단 설명 없음"
@@ -1284,147 +1373,18 @@
           "queryType": "range",
           "maxLines": 3,
           "direction": "backward",
-          "expr": "{job=\"hycad-decisions\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",playback!=\"manual\"} | json summary=\"explanation.summary\" | line_format `{{ .summary | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" | replace \"front-end_\" \"front-end \" }}`"
-        }
-      ]
-    },
-    {
-      "id": 12,
-      "title": "선택한 입력과 기준선 · 자동 재학습 없음",
-      "type": "table",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "hycad-prometheus"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 28,
-        "w": 24,
-        "h": 5
-      },
-      "description": "각 서비스의 고정 기준선으로 보정합니다. LIVE는 현재 수집, 캡처는 저장 자료를 반복 재생합니다. 캡처를 바꾸어도 LIVE 수집은 계속됩니다. 기준선과 데이터가 같은 서비스·수집 정책인지 확인해야 하며 현재 연결 확인을 정확도 검증으로 해석하지 않습니다.",
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "판정 불가 · 입력 확인",
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "wrapText": true
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "입력 모드"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "live": {
-                        "text": "LIVE"
-                      },
-                      "replay": {
-                        "text": "캡처 재생"
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "B 방식"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "z": {
-                        "text": "고정 z-score"
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "hycad-prometheus"
-          },
-          "editorMode": "code",
-          "expr": "(hycad_baseline_info{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} * on(deployment,mode,capture,job,instance) group_left(title,reference_description,cache_sha256,source_sha256) hycad_capture_info{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"}) or on(deployment,mode,capture,job,instance) hycad_baseline_info{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"}",
-          "refId": "A",
-          "range": false,
-          "instant": true,
-          "format": "table",
-          "legendFormat": ""
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "Value": true,
-              "__name__": true,
-              "job": true,
-              "instance": true,
-              "cache_sha256": true,
-              "source_sha256": true,
-              "reference_description": true
-            },
-            "renameByName": {
-              "deployment": "서비스",
-              "mode": "입력 모드",
-              "capture": "캡처 ID",
-              "title": "캡처 설명",
-              "reference": "기준선 설명",
-              "sha256": "기준선 SHA-256",
-              "b_kind": "B 방식"
-            },
-            "indexByName": {
-              "deployment": 0,
-              "mode": 1,
-              "capture": 2,
-              "title": 3,
-              "reference": 4,
-              "b_kind": 5,
-              "sha256": 6
-            }
-          }
+          "expr": "{job=\"hycad-decisions\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",playback!=\"manual\"} | json summary=\"explanation.summary\" | line_format `{{ .summary | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" | replace \"front-end_\" \"front-end \" | replace \"A \" \"비교 탐지기 \" | replace \"A=\" \"비교 탐지기=\" | replace \"A:\" \"비교 탐지기:\" | replace \"A/\" \"비교 탐지기/\" | replace \"A는\" \"비교 탐지기는\" | replace \"B \" \"시스템콜 빈도 탐지기 \" | replace \"B=\" \"시스템콜 빈도 탐지기=\" | replace \"B:\" \"시스템콜 빈도 탐지기:\" | replace \"B/\" \"시스템콜 빈도 탐지기/\" | replace \"B는\" \"시스템콜 빈도 탐지기는\" | replace \"C \" \"작업량 탐지기 \" | replace \"C=\" \"작업량 탐지기=\" | replace \"C:\" \"작업량 탐지기:\" | replace \"C/\" \"작업량 탐지기/\" | replace \"C는\" \"작업량 탐지기는\" | replace \" · \" \" \" | replace \"·\" \" \" }}`"
         }
       ]
     },
     {
       "id": 90,
-      "title": "LIVE 사건 상세 · 공격 근거 / 정상 원인 가능성 / 보존 자료 (펼쳐 보기)",
+      "title": "LIVE 사건 상세",
       "type": "row",
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 33,
+        "y": 35,
         "w": 24,
         "h": 1
       },
@@ -1432,19 +1392,19 @@
         {
           "id": 25,
           "type": "table",
-          "title": "사건 판정 · 전체 분류와 실제 임계값 초과 대상",
+          "title": "사건 판정",
           "datasource": {
             "type": "loki",
             "uid": "hycad-loki"
           },
           "gridPos": {
             "x": 0,
-            "y": 34,
+            "y": 36,
             "w": 24,
             "h": 8
           },
           "timeFrom": "7d",
-          "description": "최근 7일 보존 사건의 판정 근거입니다. A/B 실제 초과는 개별 레플리카의 점수와 임계값을 비교한 결과입니다. C는 서비스 전체의 연결 이벤트당 작업량 지표이므로 개별 레플리카 초과 집합이 없습니다. 전체 이상 의심은 제어기의 전체 분류이며, 모든 레플리카가 B를 초과하거나 공격을 받았다는 뜻이 아닙니다. 모든 사건과 최신 검토 상태를 포함합니다. 미분석 사건은 원인을 판단하지 않습니다. 아래 검토 완료 표에는 최신 기록이 검토 완료인 사건만 표시합니다.",
+          "description": "최근 7일 보존 사건의 판정 근거입니다. 비교 탐지기/시스템콜 빈도 탐지기 실제 초과는 개별 레플리카의 점수와 임계값을 비교한 결과입니다. 작업량 탐지기는 서비스 전체의 연결 이벤트당 작업량 지표이므로 개별 레플리카 초과 집합이 없습니다. 전체 이상 의심은 제어기의 전체 분류이며, 모든 레플리카가 시스템콜 빈도 탐지기를 초과하거나 공격을 받았다는 뜻이 아닙니다. 모든 사건과 최신 검토 상태를 포함합니다. 미분석 사건은 원인을 판단하지 않습니다. 아래 검토 완료 표에는 최신 기록이 검토 완료인 사건만 표시합니다.",
           "targets": [
             {
               "refId": "A",
@@ -1452,7 +1412,7 @@
                 "type": "loki",
                 "uid": "hycad-loki"
               },
-              "expr": "{job=\"hycad-investigations\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "expr": "{job=\"hycad-investigations\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" | replace \"A \" \"비교 탐지기 \" | replace \"A=\" \"비교 탐지기=\" | replace \"A:\" \"비교 탐지기:\" | replace \"A/\" \"비교 탐지기/\" | replace \"A는\" \"비교 탐지기는\" | replace \"B \" \"시스템콜 빈도 탐지기 \" | replace \"B=\" \"시스템콜 빈도 탐지기=\" | replace \"B:\" \"시스템콜 빈도 탐지기:\" | replace \"B/\" \"시스템콜 빈도 탐지기/\" | replace \"B는\" \"시스템콜 빈도 탐지기는\" | replace \"C \" \"작업량 탐지기 \" | replace \"C=\" \"작업량 탐지기=\" | replace \"C:\" \"작업량 탐지기:\" | replace \"C/\" \"작업량 탐지기/\" | replace \"C는\" \"작업량 탐지기는\" | replace \" · \" \" \" | replace \"·\" \" \" }}`",
               "queryType": "range",
               "editorMode": "code",
               "direction": "backward",
@@ -1540,8 +1500,8 @@
                   "window_end_ms (lastNotNull)": "이상 구간 종료",
                   "model_verdict (lastNotNull)": "모델 분류",
                   "replicas (lastNotNull)": "모델 지목 대상",
-                  "a_exceeded (lastNotNull)": "A 실제 초과",
-                  "b_exceeded (lastNotNull)": "B 실제 초과",
+                  "a_exceeded (lastNotNull)": "비교 탐지기 실제 초과",
+                  "b_exceeded (lastNotNull)": "시스템콜 빈도 탐지기 실제 초과",
                   "rule_summary (lastNotNull)": "적용된 판정 규칙",
                   "review_state (lastNotNull)": "검토 상태"
                 },
@@ -1563,7 +1523,7 @@
           ],
           "fieldConfig": {
             "defaults": {
-              "noValue": "미기록 · 미확인",
+              "noValue": "미기록 미확인",
               "decimals": 0,
               "custom": {
                 "align": "auto",
@@ -1618,24 +1578,24 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "A 실제 초과"
+                  "options": "비교 탐지기 실제 초과"
                 },
                 "properties": [
                   {
                     "id": "custom.width",
-                    "value": 105
+                    "value": 220
                   }
                 ]
               },
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "B 실제 초과"
+                  "options": "시스템콜 빈도 탐지기 실제 초과"
                 },
                 "properties": [
                   {
                     "id": "custom.width",
-                    "value": 105
+                    "value": 220
                   }
                 ]
               },
@@ -1667,19 +1627,19 @@
         {
           "id": 26,
           "type": "table",
-          "title": "검토 완료 사건 · 현재 해석과 남은 판단",
+          "title": "검토 결과",
           "datasource": {
             "type": "loki",
             "uid": "hycad-loki"
           },
           "gridPos": {
             "x": 0,
-            "y": 42,
+            "y": 44,
             "w": 24,
             "h": 7
           },
           "timeFrom": "7d",
-          "description": "최근 7일 중 사건별 최신 기록이 검토 완료인 사건만 표시합니다. 최신 기록이 미분석 또는 검토 오류로 바뀌면 이전 검토 결과는 이 표에서 제외합니다. 모든 사건은 위 판정 표에서 확인할 수 있습니다. 자동 판정과 원인 조사는 별개입니다. 분석자가 근거를 검토해 등록한 사건만 검토 완료로 표시합니다. 미분석은 정상·오탐·공격 중 어느 것으로도 확정하지 않은 상태입니다. 검토 완료 뒤에도 원인 미확정이나 공격 배제 불가가 남을 수 있습니다.",
+          "description": "최근 7일 중 사건별 최신 기록이 검토 완료인 사건만 표시합니다. 최신 기록이 미분석 또는 검토 오류로 바뀌면 이전 검토 결과는 이 표에서 제외합니다. 모든 사건은 위 판정 표에서 확인할 수 있습니다. 자동 판정과 원인 조사는 별개입니다. 분석자가 근거를 검토해 등록한 사건만 검토 완료로 표시합니다. 미분석은 정상 오탐 공격 중 어느 것으로도 확정하지 않은 상태입니다. 검토 완료 뒤에도 원인 미확정이나 공격 배제 불가가 남을 수 있습니다.",
           "targets": [
             {
               "refId": "A",
@@ -1687,7 +1647,7 @@
                 "type": "loki",
                 "uid": "hycad-loki"
               },
-              "expr": "{job=\"hycad-investigations\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "expr": "{job=\"hycad-investigations\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" | replace \"A \" \"비교 탐지기 \" | replace \"A=\" \"비교 탐지기=\" | replace \"A:\" \"비교 탐지기:\" | replace \"A/\" \"비교 탐지기/\" | replace \"A는\" \"비교 탐지기는\" | replace \"B \" \"시스템콜 빈도 탐지기 \" | replace \"B=\" \"시스템콜 빈도 탐지기=\" | replace \"B:\" \"시스템콜 빈도 탐지기:\" | replace \"B/\" \"시스템콜 빈도 탐지기/\" | replace \"B는\" \"시스템콜 빈도 탐지기는\" | replace \"C \" \"작업량 탐지기 \" | replace \"C=\" \"작업량 탐지기=\" | replace \"C:\" \"작업량 탐지기:\" | replace \"C/\" \"작업량 탐지기/\" | replace \"C는\" \"작업량 탐지기는\" | replace \" · \" \" \" | replace \"·\" \" \" }}`",
               "queryType": "range",
               "editorMode": "code",
               "direction": "backward",
@@ -1758,7 +1718,7 @@
                     "config": {
                       "id": "equal",
                       "options": {
-                        "value": "검토 완료 · 원인 미확정"
+                        "value": "검토 완료 원인 미확정"
                       }
                     }
                   }
@@ -1860,12 +1820,12 @@
                             "text": "미분석",
                             "color": "gray"
                           },
-                          "검토 완료 · 원인 미확정": {
-                            "text": "검토 완료 · 원인 미확정",
+                          "검토 완료 원인 미확정": {
+                            "text": "검토 완료 원인 미확정",
                             "color": "blue"
                           },
-                          "검토 기록 오류 · 미분석": {
-                            "text": "검토 기록 오류 · 미분석",
+                          "검토 기록 오류 미분석": {
+                            "text": "검토 기록 오류 미분석",
                             "color": "orange"
                           }
                         }
@@ -1896,19 +1856,19 @@
         {
           "id": 27,
           "type": "table",
-          "title": "검토 완료 사건 · 공격 근거 / 정상 동작 가능성 / 미확인 원인",
+          "title": "원인 검토",
           "datasource": {
             "type": "loki",
             "uid": "hycad-loki"
           },
           "gridPos": {
             "x": 0,
-            "y": 49,
+            "y": 51,
             "w": 24,
             "h": 11
           },
           "timeFrom": "7d",
-          "description": "최근 7일 중 사건별 최신 기록이 검토 완료인 사건만 표시합니다. 최신 기록이 미분석 또는 검토 오류로 바뀌면 이전 검토 결과는 이 표에서 제외합니다. 모든 사건은 위 판정 표에서 확인할 수 있습니다. 보존한 전후 이벤트, 연결 정보, 서비스 로그를 근거로 검토한 내용입니다. 공격 흔적을 발견하지 못했다는 결론은 보존 범위 안에서의 결과이며 공격이 없음을 증명하지 않습니다. 정상 동작 가능성은 오탐 확정과 구분합니다. 비밀·원본 명령행·로그 원문은 표시하지 않습니다.",
+          "description": "최근 7일 중 사건별 최신 기록이 검토 완료인 사건만 표시합니다. 최신 기록이 미분석 또는 검토 오류로 바뀌면 이전 검토 결과는 이 표에서 제외합니다. 모든 사건은 위 판정 표에서 확인할 수 있습니다. 보존한 전후 이벤트, 연결 정보, 서비스 로그를 근거로 검토한 내용입니다. 공격 흔적을 발견하지 못했다는 결론은 보존 범위 안에서의 결과이며 공격이 없음을 증명하지 않습니다. 정상 동작 가능성은 오탐 확정과 구분합니다. 비밀 원본 명령행 로그 원문은 표시하지 않습니다.",
           "targets": [
             {
               "refId": "A",
@@ -1916,7 +1876,7 @@
                 "type": "loki",
                 "uid": "hycad-loki"
               },
-              "expr": "{job=\"hycad-investigations\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "expr": "{job=\"hycad-investigations\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" | replace \"A \" \"비교 탐지기 \" | replace \"A=\" \"비교 탐지기=\" | replace \"A:\" \"비교 탐지기:\" | replace \"A/\" \"비교 탐지기/\" | replace \"A는\" \"비교 탐지기는\" | replace \"B \" \"시스템콜 빈도 탐지기 \" | replace \"B=\" \"시스템콜 빈도 탐지기=\" | replace \"B:\" \"시스템콜 빈도 탐지기:\" | replace \"B/\" \"시스템콜 빈도 탐지기/\" | replace \"B는\" \"시스템콜 빈도 탐지기는\" | replace \"C \" \"작업량 탐지기 \" | replace \"C=\" \"작업량 탐지기=\" | replace \"C:\" \"작업량 탐지기:\" | replace \"C/\" \"작업량 탐지기/\" | replace \"C는\" \"작업량 탐지기는\" | replace \" · \" \" \" | replace \"·\" \" \" }}`",
               "queryType": "range",
               "editorMode": "code",
               "direction": "backward",
@@ -1993,7 +1953,7 @@
                     "config": {
                       "id": "equal",
                       "options": {
-                        "value": "검토 완료 · 원인 미확정"
+                        "value": "검토 완료 원인 미확정"
                       }
                     }
                   }
@@ -2009,8 +1969,8 @@
                   "incident_id": "사건 ID",
                   "window_end_ms (lastNotNull)": "이상 구간 종료",
                   "attack_evidence (lastNotNull)": "공격 근거",
-                  "benign_evidence (lastNotNull)": "정상 동작·오탐 가능성",
-                  "unknowns (lastNotNull)": "미확인 원인·분석 한계"
+                  "benign_evidence (lastNotNull)": "정상 동작 오탐 가능성",
+                  "unknowns (lastNotNull)": "미확인 원인 분석 한계"
                 },
                 "indexByName": {
                   "incident_id": 4,
@@ -2072,19 +2032,19 @@
         {
           "id": 22,
           "type": "table",
-          "title": "레플리카별 지목 · 지속 / 해제 / 관측 중단",
+          "title": "레플리카별 지목",
           "datasource": {
             "type": "loki",
             "uid": "hycad-loki"
           },
           "gridPos": {
             "x": 0,
-            "y": 60,
+            "y": 62,
             "w": 24,
             "h": 8
           },
           "timeFrom": "7d",
-          "description": "최근 7일의 사건별 마지막 기록입니다. 전체 이상 규칙으로 지목된 대상과 해당 레플리카 자신의 A/B 임계값 초과를 구분합니다. 연속 지목 시간은 유효한 지목 창의 합이며 정상·수집 공백을 더하지 않습니다. 과거 기록에 초과 필드가 없으면 미기록으로 표시합니다.",
+          "description": "최근 7일의 사건별 마지막 기록입니다. 전체 이상 규칙으로 지목된 대상과 해당 레플리카 자신의 비교 탐지기/시스템콜 빈도 탐지기 임계값 초과를 구분합니다. 연속 지목 시간은 유효한 지목 창의 합이며 정상 수집 공백을 더하지 않습니다. 과거 기록에 초과 필드가 없으면 미기록으로 표시합니다.",
           "targets": [
             {
               "refId": "A",
@@ -2092,7 +2052,7 @@
                 "type": "loki",
                 "uid": "hycad-loki"
               },
-              "expr": "{job=\"hycad-incidents\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "expr": "{job=\"hycad-incidents\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" | replace \"A \" \"비교 탐지기 \" | replace \"A=\" \"비교 탐지기=\" | replace \"A:\" \"비교 탐지기:\" | replace \"A/\" \"비교 탐지기/\" | replace \"A는\" \"비교 탐지기는\" | replace \"B \" \"시스템콜 빈도 탐지기 \" | replace \"B=\" \"시스템콜 빈도 탐지기=\" | replace \"B:\" \"시스템콜 빈도 탐지기:\" | replace \"B/\" \"시스템콜 빈도 탐지기/\" | replace \"B는\" \"시스템콜 빈도 탐지기는\" | replace \"C \" \"작업량 탐지기 \" | replace \"C=\" \"작업량 탐지기=\" | replace \"C:\" \"작업량 탐지기:\" | replace \"C/\" \"작업량 탐지기/\" | replace \"C는\" \"작업량 탐지기는\" | replace \" · \" \" \" | replace \"·\" \" \" }}`",
               "queryType": "range",
               "editorMode": "code",
               "direction": "backward",
@@ -2203,7 +2163,7 @@
           ],
           "fieldConfig": {
             "defaults": {
-              "noValue": "미기록 · 미확인",
+              "noValue": "미기록 미확인",
               "decimals": 0,
               "custom": {
                 "align": "auto",
@@ -2334,7 +2294,7 @@
         },
         {
           "id": 23,
-          "title": "조사 자료 보존 · 전후 이벤트 / 연결 정보 / 서비스 로그",
+          "title": "조사 자료",
           "type": "table",
           "datasource": {
             "type": "loki",
@@ -2342,11 +2302,11 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 68,
+            "y": 70,
             "w": 24,
             "h": 7
           },
-          "description": "최근 7일 보존 기록을 조회합니다. 외부 호스트의 evidence 디렉터리에 보호된 원문을 저장합니다. 최초 이상 구간 전60초·후60초, 지속 이상은120초마다 추가 보존합니다. complete도 실제 원인 확정을 뜻하지 않습니다. 이전 사건의 원본은 소급 복구하지 않습니다.",
+          "description": "최근 7일 보존 기록을 조회합니다. 외부 호스트의 evidence 디렉터리에 보호된 원문을 저장합니다. 최초 이상 구간 전60초 후60초, 지속 이상은120초마다 추가 보존합니다. complete도 실제 원인 확정을 뜻하지 않습니다. 이전 사건의 원본은 소급 복구하지 않습니다.",
           "targets": [
             {
               "refId": "A",
@@ -2354,7 +2314,7 @@
                 "type": "loki",
                 "uid": "hycad-loki"
               },
-              "expr": "{job=\"hycad-evidence\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "expr": "{job=\"hycad-evidence\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" | replace \"A \" \"비교 탐지기 \" | replace \"A=\" \"비교 탐지기=\" | replace \"A:\" \"비교 탐지기:\" | replace \"A/\" \"비교 탐지기/\" | replace \"A는\" \"비교 탐지기는\" | replace \"B \" \"시스템콜 빈도 탐지기 \" | replace \"B=\" \"시스템콜 빈도 탐지기=\" | replace \"B:\" \"시스템콜 빈도 탐지기:\" | replace \"B/\" \"시스템콜 빈도 탐지기/\" | replace \"B는\" \"시스템콜 빈도 탐지기는\" | replace \"C \" \"작업량 탐지기 \" | replace \"C=\" \"작업량 탐지기=\" | replace \"C:\" \"작업량 탐지기:\" | replace \"C/\" \"작업량 탐지기/\" | replace \"C는\" \"작업량 탐지기는\" | replace \" · \" \" \" | replace \"·\" \" \" }}`",
               "queryType": "range",
               "editorMode": "code",
               "direction": "backward",
@@ -2447,7 +2407,7 @@
                   "incident_id": "사건 ID",
                   "replicas (lastNotNull)": "대상 레플리카",
                   "state (lastNotNull)": "보존 상태",
-                  "pre_events (lastNotNull)": "이전·이상 이벤트 수",
+                  "pre_events (lastNotNull)": "이전 이상 이벤트 수",
                   "post_events (lastNotNull)": "이후 이벤트 수",
                   "service_logs (lastNotNull)": "서비스 로그",
                   "location (lastNotNull)": "보존 폴더 ID",
@@ -2474,7 +2434,7 @@
           ],
           "fieldConfig": {
             "defaults": {
-              "noValue": "기록 없음 · 정상으로 해석하지 않음",
+              "noValue": "기록 없음 정상으로 해석하지 않음",
               "custom": {
                 "align": "auto",
                 "cellOptions": {
@@ -2507,7 +2467,7 @@
                             "text": "보존 완료"
                           },
                           "limited": {
-                            "text": "일부 누락·한도 확인"
+                            "text": "일부 누락 한도 확인"
                           },
                           "interrupted": {
                             "text": "보존 중단"
@@ -2536,7 +2496,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "이전·이상 이벤트 수"
+                  "options": "이전 이상 이벤트 수"
                 },
                 "properties": [
                   {
@@ -2625,23 +2585,23 @@
         },
         {
           "id": 21,
-          "title": "판정 근거 상세 · 행을 펼쳐 확인",
+          "title": "판정 근거 상세",
           "type": "logs",
           "datasource": {
             "type": "loki",
             "uid": "hycad-loki"
           },
-          "description": "한 행을 펼치면 원본 윈도 시각, 제어기 분기, A 특성별 기여, 레플리카별 비교 근거와 B 편차를 확인할 수 있습니다. JSON 본문은 저장된 판정 근거이며 로그 스트림 레이블로 사용하지 않습니다. 입력 부족도 그대로 기록합니다. 표시할 로그가 없으면 근거 없음이며, 침해 여부의 결론이 아닙니다.",
+          "description": "한 행을 펼치면 원본 윈도 시각, 제어기 분기, 비교 탐지기 특성별 기여, 레플리카별 비교 근거와 시스템콜 빈도 탐지기 편차를 확인할 수 있습니다. JSON 본문은 저장된 판정 근거이며 로그 스트림 레이블로 사용하지 않습니다. 입력 부족도 그대로 기록합니다. 표시할 로그가 없으면 근거 없음이며, 침해 여부의 결론이 아닙니다.",
           "gridPos": {
             "x": 0,
-            "y": 75,
+            "y": 77,
             "w": 24,
             "h": 9
           },
           "maxDataPoints": 30,
           "fieldConfig": {
             "defaults": {
-              "noValue": "분석 기록 없음 · 정상 또는 이상으로 해석하지 않습니다"
+              "noValue": "분석 기록 없음 정상 또는 이상으로 해석하지 않습니다"
             },
             "overrides": []
           },
@@ -2662,7 +2622,7 @@
                 "type": "loki",
                 "uid": "hycad-loki"
               },
-              "expr": "{job=\"hycad-decisions\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" }}`",
+              "expr": "{job=\"hycad-decisions\",deployment=\"$deployment\",mode=\"live\",capture=~\"live|\"} | line_format `{{ __line__ | replace \"부분 감염\" \"부분 이상 의심\" | replace \"전원 감염\" \"전체 이상 의심\" | replace \"docker-compose_\" \"\" | replace \"catalogue_\" \"catalogue \" | replace \"A \" \"비교 탐지기 \" | replace \"A=\" \"비교 탐지기=\" | replace \"A:\" \"비교 탐지기:\" | replace \"A/\" \"비교 탐지기/\" | replace \"A는\" \"비교 탐지기는\" | replace \"B \" \"시스템콜 빈도 탐지기 \" | replace \"B=\" \"시스템콜 빈도 탐지기=\" | replace \"B:\" \"시스템콜 빈도 탐지기:\" | replace \"B/\" \"시스템콜 빈도 탐지기/\" | replace \"B는\" \"시스템콜 빈도 탐지기는\" | replace \"C \" \"작업량 탐지기 \" | replace \"C=\" \"작업량 탐지기=\" | replace \"C:\" \"작업량 탐지기:\" | replace \"C/\" \"작업량 탐지기/\" | replace \"C는\" \"작업량 탐지기는\" | replace \" · \" \" \" | replace \"·\" \" \" }}`",
               "queryType": "range",
               "editorMode": "code",
               "maxLines": 30,

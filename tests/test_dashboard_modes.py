@@ -20,7 +20,8 @@ class DashboardModesTests(unittest.TestCase):
     def test_generated_dashboard_matches_committed_source(self):
         self.assertEqual(builder.build(), self.dashboard)
         self.assertEqual("hycad-overview", self.dashboard["uid"])
-        self.assertEqual(12, len(self.panels))
+        self.assertEqual(11, len(self.panels))
+        self.assertNotIn(12, self.panels)
 
     def test_modes_and_captures_are_independently_selected(self):
         variables = {v["name"]: v for v in self.dashboard["templating"]["list"]}
@@ -89,6 +90,49 @@ class DashboardModesTests(unittest.TestCase):
             for query in panel["targets"]:
                 self.assertIn(query["datasource"]["uid"], ("hycad-prometheus", "hycad-loki"))
 
+    def test_workload_keeps_each_replica_and_filters_invalid_denominators(self):
+        for dashboard in (self.dashboard, builder.build_manual()):
+            work = next(p for p in dashboard["panels"] if p["id"] == 9)
+            self.assertEqual(1, len(work["targets"]))
+            query = work["targets"][0]
+            expr = query["expr"]
+            self.assertEqual("{{replica}}", query["legendFormat"])
+            self.assertTrue(query["range"])
+            self.assertFalse(query["instant"])
+            self.assertIn("hycad_window_events{", expr)
+            self.assertRegex(expr, r"hycad_window_accepts\{[^}]+\}\s*>\s*0")
+            matching = re.search(r"/\s*on\(([^)]+)\)", expr)
+            self.assertIsNotNone(matching)
+            self.assertEqual(
+                {"deployment", "mode", "capture", "job", "instance", "replica"},
+                set(matching.group(1).split(",")),
+            )
+            # A summed service value or one selected replica would hide the
+            # different per-replica workload changes this chart is for.
+            self.assertNotRegex(expr, r"\b(?:sum|avg|max|min|topk|bottomk)\s*(?:by|without|\()")
+            self.assertNotRegex(expr, r"\breplica\s*(?:=|!=)")
+            self.assertNotIn("hycad_channel_c_score", expr)
+            self.assertNotIn("hycad_threshold", expr)
+            # A zero denominator is missing data, never an artificial count of
+            # one, infinity, or a false healthy zero. Freshness gating remains.
+            self.assertNotIn("clamp_min", expr)
+            self.assertNotIn("> bool", expr)
+            self.assertNotIn("or vector", expr)
+            self.assertIn("hycad_ready", expr)
+            self.assertIn("up{", expr)
+
+    def test_raw_workload_does_not_reuse_score_threshold_scale(self):
+        for dashboard in (self.dashboard, builder.build_manual()):
+            work = next(p for p in dashboard["panels"] if p["id"] == 9)
+            defaults = work["fieldConfig"]["defaults"]
+            self.assertEqual("이벤트 / 연결 이벤트", defaults["custom"]["axisLabel"])
+            self.assertEqual("linear", defaults["custom"]["scaleDistribution"]["type"])
+            self.assertFalse(defaults["custom"]["spanNulls"])
+            self.assertEqual("off", defaults["custom"].get("thresholdsStyle", {"mode": "off"})["mode"])
+            self.assertTrue(all(step["value"] is None
+                                for step in defaults.get("thresholds", {}).get("steps", [])))
+            self.assertEqual(4, len(work["fieldConfig"]["overrides"]))
+
     def test_legacy_investigation_is_explicitly_live_only(self):
         row = [p for p in self.dashboard["panels"] if p["type"] == "row"][0]
         self.assertIn("LIVE", row["title"])
@@ -101,7 +145,8 @@ class DashboardModesTests(unittest.TestCase):
         manual = json.loads(builder.MANUAL_OUTPUT.read_text())
         self.assertEqual(builder.build_manual(), manual)
         self.assertEqual("hycad-replay", manual["uid"])
-        self.assertEqual(12, len(manual["panels"]))
+        self.assertEqual(11, len(manual["panels"]))
+        self.assertNotIn(12, {p["id"] for p in manual["panels"]})
         for panel in manual["panels"]:
             for query in panel["targets"]:
                 if query["datasource"]["type"] == "prometheus":

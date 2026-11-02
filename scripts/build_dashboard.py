@@ -9,6 +9,7 @@ dashboard uses an isolated scrape job and a same-origin authenticated controller
 """
 import copy
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,42 @@ PROM = {"type": "prometheus", "uid": "hycad-prometheus"}
 LOKI = {"type": "loki", "uid": "hycad-loki"}
 SCOPE = 'job="hycad",deployment="$deployment",mode="$mode",capture="$capture"'
 MATCH = "deployment,mode,capture,job,instance"
+DETECTORS = {"A": "비교 탐지기", "B": "시스템콜 빈도 탐지기", "C": "작업량 탐지기"}
+LOG_DISPLAY = ''.join(
+    f' | replace "{letter}{suffix}" "{name}{suffix}"'
+    for letter, name in DETECTORS.items() for suffix in (' ', '=', ':', '/', '는'))
+LOG_DISPLAY += ' | replace " · " " " | replace "·" " "'
+
+
+def display_text(value):
+    """Expand research abbreviations in display text, never metric/schema keys."""
+    value = value.replace("·", " ")
+    value = re.sub(r"(?<![A-Za-z0-9_])[ABC](?![A-Za-z0-9_])",
+                   lambda match: DETECTORS[match.group()], value)
+    return re.sub(r" {2,}", " ", value)
+
+
+def clean_display(value):
+    """Keep imported investigation panels consistent without changing queries."""
+    if isinstance(value, list):
+        return [clean_display(item) for item in value]
+    if isinstance(value, dict):
+        result = {}
+        for key, item in value.items():
+            if "·" in key and re.search(r"[가-힣]", key):
+                key = display_text(key)
+            if key == "renameByName":
+                result[key] = {field: display_text(label) for field, label in item.items()}
+            elif key in {"title", "description", "noValue", "text", "displayName", "axisLabel"} and isinstance(item, str):
+                result[key] = display_text(item)
+            elif key == "matcher" and item.get("id") == "byName":
+                result[key] = dict(item, options=display_text(item["options"]))
+            elif key == "value" and isinstance(item, str) and "·" in item:
+                result[key] = display_text(item)
+            else:
+                result[key] = clean_display(item)
+        return result
+    return value
 
 
 def metric(name, extra=""):
@@ -125,6 +162,34 @@ def ratio_chart(pid, title, pos, channel, description):
     return p
 
 
+def work_chart():
+    p = panel(9, "작업량 탐지기", "timeseries", (0, 15, 24, 8),
+              "각 선은 한 레플리카의 연결 이벤트당 작업량 변화를 나타내며 모든 레플리카를 함께 표시합니다. "
+              "30초 구간의 레플리카별 전체 이벤트 수를 accept와 accept4 이벤트 수로 나눕니다.\n\n"
+              "실제 판정은 전체 레플리카의 이벤트 합을 연결 이벤트 합으로 나눈 작업량을 사용합니다. "
+              "정상 기준 작업량은 유효한 정상 구간에서 얻은 전체 작업량의 중앙값입니다. "
+              "|log2(전체 작업량 / 정상 기준 작업량)| > 0.20이면 임계값 초과입니다. "
+              "0.20은 연구 실험 결과를 검토해 정한 고정값이며 현재 정상 기준선에서 자동 산출한 값은 아닙니다. "
+              "이는 정상 기준의 약 0.871배 미만 또는 1.149배 초과에 해당합니다.\n\n"
+              "그래프의 세로축은 레플리카별 실제 작업량이므로 판정 점수 임계값 0.20을 선으로 표시하지 않습니다. "
+              "연결 이벤트는 HTTP 요청 수와 다를 수 있으며, 분모가 0이거나 입력이 불완전한 구간은 표시하지 않습니다.")
+    p["fieldConfig"]["defaults"].update(
+        unit="none", decimals=2, min=0, color={"mode": "palette-classic"},
+        custom={"drawStyle": "line", "lineInterpolation": "stepAfter", "lineWidth": 2,
+                "fillOpacity": 0, "showPoints": "never", "spanNulls": False,
+                "axisPlacement": "auto", "axisLabel": "이벤트 / 연결 이벤트",
+                "scaleDistribution": {"type": "linear"}, "thresholdsStyle": {"mode": "off"}})
+    p["fieldConfig"]["overrides"] = replica_styles()
+    p["targets"] = [target(fresh(
+        f'{metric("hycad_window_events")} / on({MATCH},replica) '
+        f'({metric("hycad_window_accepts")} > 0)'), legend="{{replica}}")]
+    p["transformations"] = [{"id": "renameByRegex", "options": {
+        "regex": "^docker-compose_(catalogue|front-end)_([0-9]+)$", "renamePattern": "$1 $2"}}]
+    p["options"] = {"tooltip": {"mode": "multi", "sort": "desc"},
+                    "legend": {"displayMode": "list", "placement": "bottom", "showLegend": True}}
+    return p
+
+
 def query_variable(name, label, query):
     return {"name": name, "label": label, "type": "query", "datasource": PROM,
             "definition": query, "query": {"query": query, "refId": f"VariableQuery-{name}"},
@@ -154,7 +219,7 @@ def build():
         query_variable("capture", "입력 캡처", 'label_values(hycad_window_seconds{job="hycad",deployment="$deployment",mode="$mode"}, capture)')
     ]}
     ps = d["panels"]
-    timeline = panel(1, "판정 흐름 · ${deployment} / ${mode:text} / ${capture}", "state-timeline", (0, 0, 24, 4),
+    timeline = panel(1, "판정 흐름", "state-timeline", (0, 0, 24, 4),
                      "기록 시각의 판정입니다. 캡처 재생의 시간축은 이번 재생 처리 시각이며 원본 캡처 시각은 아래에 별도 표시됩니다. "
                      "회색은 불완전·오래된 입력 또는 연결 불가입니다. 정상 변화 의심은 A 침묵·B 초과·C 안정 조건이며 정상 원인이 입증됐다는 뜻은 아닙니다.")
     timeline["targets"] = [target(CURRENT_VERDICT, legend="판정")]
@@ -181,17 +246,21 @@ def build():
                        "-1": {"text": "판정 불가", "color": "gray"},
                        "0": {"text": "현재 미관측", "color": "text"},
                        "1": {"text": "정상 변화 의심", "color": "blue"}},
-                   description="A 침묵 + B 초과 + C 안정일 때만 표시합니다. 버전·부하 등 정상 원인 확인이 필요합니다. 기준선은 고정하며 자동 재학습하지 않습니다."))
+                   description="비교 탐지기가 지목하지 않고 시스템콜 빈도 탐지기는 초과하며 작업량 탐지기는 안정 범위일 때 표시합니다. 버전이나 부하 등 정상 원인은 별도 확인이 필요합니다."))
     ps.append(stat(6, "입력 원본 구간 종료", (18, 4, 6, 4),
                    f'max({metric("hycad_window_end_timestamp_seconds")} and on(job,instance) (up{{job="hycad"}} == 1)) * 1000',
                    unit="dateTimeAsIso", description="캡처 모드에서는 과거 캡처의 시각입니다. LIVE 입력 상태와 혼동하지 않습니다."))
-    ps.append(ratio_chart(7, "A · 레플리카 간 차이 / 임계값", (0, 8, 12, 7), "a",
-                          "1보다 크면 해당 레플리카의 A 임계값 초과입니다. 집합 특성 차이를 비교하며 A 우선 판정 규칙을 적용합니다."))
-    ps.append(ratio_chart(8, "B · 정상 기준선 편차 / 임계값 (로그축)", (12, 8, 12, 7), "b",
-                          "1보다 크면 B 임계값 초과입니다. 큰 편차와 정상 부근을 함께 보기 위해 로그축을 씁니다. 0은 로그축에서 표시하지 않습니다."))
-    ps.append(ratio_chart(9, "C · 연결 이벤트당 작업량 변화 / 임계값", (0, 15, 9, 7), "c",
-                          "C는 서비스 전체 abs(log2((이벤트/accept 계열 이벤트)/기준값))입니다. 1보다 크면 임계값 초과입니다. HTTP 요청당 비용이나 개별 레플리카 점수가 아닙니다."))
-    replicas = panel(10, "현재 레플리카 · 모델 지목과 실제 초과", "table", (9, 15, 15, 7),
+    ps.append(ratio_chart(7, "비교 탐지기", (0, 8, 12, 7), "a",
+                          "동일한 30초 구간의 레플리카 간 특성 차이를 비교합니다. "
+                          "임계값은 유효한 정상 기준선의 모든 구간과 레플리카에서 관측한 비교 점수 최댓값의 2배입니다. "
+                          "세로축은 점수 / 임계값이며 1보다 크면 초과입니다. 임계값이 0이면 비율은 표시하지 않고 레플리카 표에서 실제 초과를 확인합니다."))
+    ps.append(ratio_chart(8, "시스템콜 빈도 탐지기", (12, 8, 12, 7), "b",
+                          "정상 기준선의 시스템콜 구성비 평균과 표준편차로 z 점수를 계산합니다. "
+                          "레플리카 점수는 시스템콜별 절댓값 z 점수의 최댓값이고, 임계값은 정상 구간의 모든 레플리카 점수 중 최댓값입니다. "
+                          "표준편차 하한은 0.00001입니다. 전체 레플리카의 25% 이상이 초과하면 서비스 수준의 빈도 이상 조건을 충족합니다. "
+                          "세로축은 점수 / 임계값이며 1보다 크면 초과입니다. 로그축이므로 0은 표시되지 않습니다."))
+    ps.append(work_chart())
+    replicas = panel(10, "레플리카별 판정", "table", (0, 23, 24, 6),
                      "모델 지목과 각 레플리카의 A/B 실제 임계값 초과를 따로 표시합니다. 데이터가 불완전하거나 오래되면 이전 점수를 유지하지 않습니다.")
     replicas["targets"] = [target(f"max by(replica) ({expr})", ref, instant=True, table=True)
                             for ref, expr in (("A", fresh(metric("hycad_replica_anomaly"))),
@@ -208,7 +277,7 @@ def build():
         {"matcher": {"id": "byName", "options": "모델 지목"}, "properties": [
             {"id": "mappings", "value": value_mapping({"0": {"text": "없음"}, "1": {"text": "지목", "color": "orange"}})},
             {"id": "custom.cellOptions", "value": {"type": "color-text"}}]},
-        {"matcher": {"id": "byRegexp", "options": "[AB] 실제 초과"}, "properties": [
+        {"matcher": {"id": "byRegexp", "options": "(비교 탐지기|시스템콜 빈도 탐지기) 실제 초과"}, "properties": [
             {"id": "mappings", "value": value_mapping({"0": {"text": "없음"}, "1": {"text": "초과", "color": "orange"}})},
             {"id": "custom.cellOptions", "value": {"type": "color-text"}}]},
         {"matcher": {"id": "byName", "options": "레플리카"}, "properties": [
@@ -217,7 +286,7 @@ def build():
             {"id": "custom.width", "value": 160}]}]
     replicas["options"] = {"showHeader": True, "cellHeight": "sm", "sortBy": [{"displayName": "레플리카", "desc": False}]}
     ps.append(replicas)
-    reasons = panel(11, "최근 판단 근거 · 최신 3개 창", "logs", (0, 22, 24, 6),
+    reasons = panel(11, "최근 판단 근거", "logs", (0, 29, 24, 6),
                     "완료된 창의 짧은 모델 설명입니다. 처리 시각과 원본 구간을 함께 확인하세요. 공격·정상 원인 검토와 전후 자료는 LIVE 사건 조사에서 확인합니다.")
     reasons["datasource"] = LOKI
     reasons["targets"] = [{"refId": "A", "datasource": LOKI, "editorMode": "code", "queryType": "range",
@@ -226,40 +295,30 @@ def build():
                                    ' | json summary="explanation.summary" | line_format `{{ .summary'
                                    ' | replace "부분 감염" "부분 이상 의심" | replace "전원 감염" "전체 이상 의심"'
                                    ' | replace "docker-compose_" "" | replace "catalogue_" "catalogue "'
-                                   ' | replace "front-end_" "front-end " }}`'}]
+                                   ' | replace "front-end_" "front-end "' + LOG_DISPLAY + ' }}`'}]
     reasons["fieldConfig"]["defaults"]["noValue"] = "해당 입력의 판단 설명 없음"
     reasons["options"] = {"showTime": True, "showLabels": False, "showCommonLabels": False,
                           "wrapLogMessage": True, "prettifyLogMessage": False,
                           "enableLogDetails": True, "dedupStrategy": "none", "sortOrder": "Descending"}
     ps.append(reasons)
-    source = panel(12, "선택한 입력과 기준선 · 자동 재학습 없음", "table", (0, 28, 24, 5),
-                   "각 서비스의 고정 기준선으로 보정합니다. LIVE는 현재 수집, 캡처는 저장 자료를 반복 재생합니다. 캡처를 바꾸어도 LIVE 수집은 계속됩니다. "
-                   "기준선과 데이터가 같은 서비스·수집 정책인지 확인해야 하며 현재 연결 확인을 정확도 검증으로 해석하지 않습니다.")
-    baseline = metric("hycad_baseline_info")
-    capture = metric("hycad_capture_info")
-    source["targets"] = [target(
-        f'({baseline} * on({MATCH}) group_left(title,reference_description,cache_sha256,source_sha256) {capture}) '
-        f'or on({MATCH}) {baseline}', instant=True, table=True)]
-    source["transformations"] = [{"id": "organize", "options": {
-        "excludeByName": {k: True for k in ("Time", "Value", "__name__", "job", "instance", "cache_sha256", "source_sha256", "reference_description")},
-        "renameByName": {"deployment": "서비스", "mode": "입력 모드", "capture": "캡처 ID", "title": "캡처 설명",
-                         "reference": "기준선 설명", "sha256": "기준선 SHA-256", "b_kind": "B 방식"},
-        "indexByName": {"deployment": 0, "mode": 1, "capture": 2, "title": 3, "reference": 4, "b_kind": 5, "sha256": 6}}}]
-    source["fieldConfig"]["defaults"].update(custom={"align": "auto", "cellOptions": {"type": "auto"}, "wrapText": True})
-    source["fieldConfig"]["overrides"] = [
-        {"matcher": {"id": "byName", "options": "입력 모드"}, "properties": [{"id": "mappings", "value": value_mapping({"live": {"text": "LIVE"}, "replay": {"text": "캡처 재생"}})}]},
-        {"matcher": {"id": "byName", "options": "B 방식"}, "properties": [{"id": "mappings", "value": value_mapping({"z": {"text": "고정 z-score"}})}]}]
-    source["options"] = {"showHeader": True, "cellHeight": "sm"}
-    ps.append(source)
     details = json.loads(INVESTIGATION_TEMPLATE.read_text(encoding="utf-8"))
-    y = 34
+    y = 36
+    detail_titles = {25: "사건 판정", 26: "검토 결과", 27: "원인 검토", 22: "레플리카별 지목", 23: "조사 자료", 21: "판정 근거 상세"}
     for item in details:
+        item["title"] = detail_titles.get(item["id"], item["title"])
+        for query in item.get("targets", []):
+            query["expr"] = query["expr"].replace(' }}`', LOG_DISPLAY + ' }}`')
+        for override in item.get("fieldConfig", {}).get("overrides", []):
+            if override["matcher"].get("options") in ("A 실제 초과", "B 실제 초과"):
+                for prop in override["properties"]:
+                    if prop["id"] == "custom.width":
+                        prop["value"] = 220
         item["gridPos"].update(x=0, y=y, w=24)
         y += item["gridPos"]["h"]
-    ps.append({"id": 90, "title": "LIVE 사건 상세 · 공격 근거 / 정상 원인 가능성 / 보존 자료 (펼쳐 보기)",
-               "type": "row", "collapsed": True, "gridPos": {"x": 0, "y": 33, "w": 24, "h": 1},
+    ps.append({"id": 90, "title": "LIVE 사건 상세",
+               "type": "row", "collapsed": True, "gridPos": {"x": 0, "y": 35, "w": 24, "h": 1},
                "panels": details})
-    return d
+    return clean_display(d)
 
 
 def build_manual():
@@ -277,7 +336,7 @@ def build_manual():
             t["expr"] = t["expr"].replace('job="hycad"', 'job="hycad-manual"')
             t["expr"] = t["expr"].replace('playback!="manual"', 'playback="manual"')
         if p["id"] == 1:
-            p["title"] = "수동 재생 흐름 · ${deployment} / ${capture}"
+            p["title"] = "수동 재생 흐름"
         if p["id"] == 3:
             p["title"] = "재생 제어 상태"
             p["description"] = "위 '캡처 선택 · 시작/정지 · 배속' 버튼으로 재생을 제어합니다. 선택 전에는 대기합니다. 일시정지·중단·완료 시 점수와 판정을 유효 상태로 유지하지 않습니다."
@@ -294,9 +353,6 @@ def build_manual():
                 "5": {"text": "재생 오류", "color": "red"}})
         if p["id"] == 11:
             p["description"] = "현재 선택 캡처의 수동 재생 판단 근거입니다. 표시 시각은 이번 처리 시각이며 설명 안의 원본 구간과 구분합니다."
-        if p["id"] == 12:
-            p["description"] = "이 페이지는 수동 제어 프로세스만 조회합니다. 캡처 선택·재생 제어는 위 버튼으로 이동하세요. "
-            p["description"] += "정지·일시정지 동안 이전 판정을 현재 유효 판정으로 표시하지 않습니다. 고정 기준선으로 재판정하며 자동 재학습하지 않습니다."
     for v in d["templating"]["list"]:
         if v["name"] == "mode":
             v.update(type="constant", query="replay", hide=2,
@@ -316,7 +372,7 @@ def build_manual():
             v["regex"] = '/' + v["name"] + '="([^"]+)"/'
             v["refresh"] = 2
             v["hide"] = 2
-    return d
+    return clean_display(d)
 
 
 if __name__ == "__main__":
