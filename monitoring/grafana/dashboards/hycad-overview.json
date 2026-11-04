@@ -38,9 +38,9 @@
   ],
   "panels": [
     {
-      "id": 1,
-      "title": "판정 흐름",
-      "type": "state-timeline",
+      "id": 13,
+      "title": "레플리카 상태",
+      "type": "canvas",
       "datasource": {
         "type": "prometheus",
         "uid": "hycad-prometheus"
@@ -49,69 +49,1818 @@
         "x": 0,
         "y": 0,
         "w": 24,
-        "h": 4
+        "h": 10
       },
-      "description": "기록 시각의 판정입니다. 캡처 재생의 시간축은 이번 재생 처리 시각이며 원본 캡처 시각은 아래에 별도 표시됩니다. 회색은 불완전 오래된 입력 또는 연결 불가입니다. 정상 변화 의심은 비교 탐지기 침묵 시스템콜 빈도 탐지기 초과 작업량 탐지기 안정 조건이며 정상 원인이 입증됐다는 뜻은 아닙니다.",
+      "description": "네 개의 그림은 선택한 서비스의 레플리카입니다. 그림 색과 큰 문구는 모델의 지목이며 공격 확정이 아닙니다. 아래 두 줄은 비교 탐지기와 시스템콜 빈도 탐지기가 각 레플리카에서 실제 임계값을 초과했는지 표시합니다. 전체 이상 의심에서도 실제 초과가 없는 레플리카가 모델에 지목될 수 있습니다. 판정 가능한 최신 30초 입력이 없으면 회색 판정 불가로 표시합니다. 지목 없음은 정상 원인 확정을 뜻하지 않습니다.",
       "fieldConfig": {
         "defaults": {
-          "noValue": "판정 불가 입력 확인",
+          "noValue": "판정 불가",
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
           "mappings": [
             {
               "type": "value",
               "options": {
+                "-1": {
+                  "text": "판정 불가",
+                  "color": "#8E8E8E"
+                },
                 "0": {
-                  "text": "정상 범위",
-                  "color": "green"
+                  "text": "지목 없음",
+                  "color": "#5794F2"
                 },
                 "1": {
-                  "text": "부분 이상 의심",
-                  "color": "orange"
-                },
-                "2": {
-                  "text": "전체 이상 의심",
-                  "color": "red"
-                },
-                "3": {
-                  "text": "정상 변화 의심",
-                  "color": "blue"
-                },
-                "4": {
-                  "text": "판정 불가",
-                  "color": "gray"
+                  "text": "이상 의심",
+                  "color": "#FF9830"
                 }
               }
             }
           ],
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "lineWidth": 0,
-            "fillOpacity": 90
-          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "gray",
+                "color": "#8E8E8E",
                 "value": null
               }
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "SERVICE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "service_classification"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "정상 범위",
+                        "color": "green"
+                      },
+                      "1": {
+                        "text": "부분 이상 의심",
+                        "color": "orange"
+                      },
+                      "2": {
+                        "text": "전체 이상 의심",
+                        "color": "red"
+                      },
+                      "3": {
+                        "text": "정상 변화 의심",
+                        "color": "blue"
+                      },
+                      "4": {
+                        "text": "판정 불가",
+                        "color": "gray"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "MODEL1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_1_model"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "지목 없음",
+                        "color": "#5794F2"
+                      },
+                      "1": {
+                        "text": "이상 의심",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "COMPARE1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_1_comparison"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "초과 없음",
+                        "color": "text"
+                      },
+                      "1": {
+                        "text": "실제 초과",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "FREQUENCY1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_1_frequency"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "초과 없음",
+                        "color": "text"
+                      },
+                      "1": {
+                        "text": "실제 초과",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "MODEL2"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_2_model"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "지목 없음",
+                        "color": "#5794F2"
+                      },
+                      "1": {
+                        "text": "이상 의심",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "COMPARE2"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_2_comparison"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "초과 없음",
+                        "color": "text"
+                      },
+                      "1": {
+                        "text": "실제 초과",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "FREQUENCY2"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_2_frequency"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "초과 없음",
+                        "color": "text"
+                      },
+                      "1": {
+                        "text": "실제 초과",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "MODEL3"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_3_model"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "지목 없음",
+                        "color": "#5794F2"
+                      },
+                      "1": {
+                        "text": "이상 의심",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "COMPARE3"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_3_comparison"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "초과 없음",
+                        "color": "text"
+                      },
+                      "1": {
+                        "text": "실제 초과",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "FREQUENCY3"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_3_frequency"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "초과 없음",
+                        "color": "text"
+                      },
+                      "1": {
+                        "text": "실제 초과",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "MODEL4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_4_model"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "지목 없음",
+                        "color": "#5794F2"
+                      },
+                      "1": {
+                        "text": "이상 의심",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "COMPARE4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_4_comparison"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "초과 없음",
+                        "color": "text"
+                      },
+                      "1": {
+                        "text": "실제 초과",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "FREQUENCY4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "replica_4_frequency"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "-1": {
+                        "text": "판정 불가",
+                        "color": "#8E8E8E"
+                      },
+                      "0": {
+                        "text": "초과 없음",
+                        "color": "text"
+                      },
+                      "1": {
+                        "text": "실제 초과",
+                        "color": "#FF9830"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "mergeValues": true,
-        "showValue": "auto",
-        "rowHeight": 0.9,
-        "legend": {
-          "showLegend": false
-        },
+        "inlineEditing": false,
+        "showAdvancedTypes": false,
+        "panZoom": false,
+        "zoomToContent": false,
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "disableForOneClick": false
         },
-        "alignValue": "left"
+        "root": {
+          "name": "hycad-replicas",
+          "type": "frame",
+          "elements": [
+            {
+              "name": "service-classification-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "서비스 분류"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 2,
+                "right": 88,
+                "top": 4,
+                "height": 22
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "service-classification",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "service_classification",
+                  "fixed": "판정 불가"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 14,
+                "color": {
+                  "field": "service_classification",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 12,
+                "right": 62,
+                "top": 4,
+                "height": 22
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-1-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "레플리카 1"
+                },
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 2,
+                "right": 76,
+                "top": 33,
+                "height": 24
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-1-icon-frame",
+              "type": "frame",
+              "config": {},
+              "placement": {
+                "left": 2,
+                "right": 76,
+                "top": 59,
+                "height": 90
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "elements": [
+                {
+                  "name": "replica-1-server",
+                  "type": "server",
+                  "placement": {
+                    "left": 0,
+                    "top": 0,
+                    "width": 84,
+                    "height": 84
+                  },
+                  "constraint": {
+                    "horizontal": "center",
+                    "vertical": "top"
+                  },
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "width": 0,
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "config": {
+                    "type": "Single",
+                    "statusColor": {
+                      "field": "replica_1_model",
+                      "fixed": "#8E8E8E"
+                    },
+                    "bulbColor": {
+                      "field": "replica_1_model",
+                      "fixed": "#8E8E8E"
+                    },
+                    "blinkRate": {
+                      "fixed": 0
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "replica-1-model",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_1_model",
+                  "fixed": "판정 불가"
+                },
+                "align": "center",
+                "valign": "middle",
+                "size": 20,
+                "color": {
+                  "field": "replica_1_model",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 2,
+                "right": 76,
+                "top": 151,
+                "height": 28
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-1-comparison-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "비교 탐지기"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 2,
+                "right": 84,
+                "top": 188,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-1-comparison",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_1_comparison",
+                  "fixed": "판정 불가"
+                },
+                "align": "right",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "field": "replica_1_comparison",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 16,
+                "right": 76,
+                "top": 188,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-1-frequency-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "시스템콜 빈도 탐지기"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 2,
+                "right": 84,
+                "top": 211,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-1-frequency",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_1_frequency",
+                  "fixed": "판정 불가"
+                },
+                "align": "right",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "field": "replica_1_frequency",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 16,
+                "right": 76,
+                "top": 211,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-2-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "레플리카 2"
+                },
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 26,
+                "right": 52,
+                "top": 33,
+                "height": 24
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-2-icon-frame",
+              "type": "frame",
+              "config": {},
+              "placement": {
+                "left": 26,
+                "right": 52,
+                "top": 59,
+                "height": 90
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "elements": [
+                {
+                  "name": "replica-2-server",
+                  "type": "server",
+                  "placement": {
+                    "left": 0,
+                    "top": 0,
+                    "width": 84,
+                    "height": 84
+                  },
+                  "constraint": {
+                    "horizontal": "center",
+                    "vertical": "top"
+                  },
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "width": 0,
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "config": {
+                    "type": "Single",
+                    "statusColor": {
+                      "field": "replica_2_model",
+                      "fixed": "#8E8E8E"
+                    },
+                    "bulbColor": {
+                      "field": "replica_2_model",
+                      "fixed": "#8E8E8E"
+                    },
+                    "blinkRate": {
+                      "fixed": 0
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "replica-2-model",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_2_model",
+                  "fixed": "판정 불가"
+                },
+                "align": "center",
+                "valign": "middle",
+                "size": 20,
+                "color": {
+                  "field": "replica_2_model",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 26,
+                "right": 52,
+                "top": 151,
+                "height": 28
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-2-comparison-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "비교 탐지기"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 26,
+                "right": 60,
+                "top": 188,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-2-comparison",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_2_comparison",
+                  "fixed": "판정 불가"
+                },
+                "align": "right",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "field": "replica_2_comparison",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 40,
+                "right": 52,
+                "top": 188,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-2-frequency-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "시스템콜 빈도 탐지기"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 26,
+                "right": 60,
+                "top": 211,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-2-frequency",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_2_frequency",
+                  "fixed": "판정 불가"
+                },
+                "align": "right",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "field": "replica_2_frequency",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 40,
+                "right": 52,
+                "top": 211,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-3-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "레플리카 3"
+                },
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 50,
+                "right": 28,
+                "top": 33,
+                "height": 24
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-3-icon-frame",
+              "type": "frame",
+              "config": {},
+              "placement": {
+                "left": 50,
+                "right": 28,
+                "top": 59,
+                "height": 90
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "elements": [
+                {
+                  "name": "replica-3-server",
+                  "type": "server",
+                  "placement": {
+                    "left": 0,
+                    "top": 0,
+                    "width": 84,
+                    "height": 84
+                  },
+                  "constraint": {
+                    "horizontal": "center",
+                    "vertical": "top"
+                  },
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "width": 0,
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "config": {
+                    "type": "Single",
+                    "statusColor": {
+                      "field": "replica_3_model",
+                      "fixed": "#8E8E8E"
+                    },
+                    "bulbColor": {
+                      "field": "replica_3_model",
+                      "fixed": "#8E8E8E"
+                    },
+                    "blinkRate": {
+                      "fixed": 0
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "replica-3-model",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_3_model",
+                  "fixed": "판정 불가"
+                },
+                "align": "center",
+                "valign": "middle",
+                "size": 20,
+                "color": {
+                  "field": "replica_3_model",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 50,
+                "right": 28,
+                "top": 151,
+                "height": 28
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-3-comparison-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "비교 탐지기"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 50,
+                "right": 36,
+                "top": 188,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-3-comparison",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_3_comparison",
+                  "fixed": "판정 불가"
+                },
+                "align": "right",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "field": "replica_3_comparison",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 64,
+                "right": 28,
+                "top": 188,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-3-frequency-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "시스템콜 빈도 탐지기"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 50,
+                "right": 36,
+                "top": 211,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-3-frequency",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_3_frequency",
+                  "fixed": "판정 불가"
+                },
+                "align": "right",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "field": "replica_3_frequency",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 64,
+                "right": 28,
+                "top": 211,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-4-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "레플리카 4"
+                },
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 74,
+                "right": 4,
+                "top": 33,
+                "height": 24
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-4-icon-frame",
+              "type": "frame",
+              "config": {},
+              "placement": {
+                "left": 74,
+                "right": 4,
+                "top": 59,
+                "height": 90
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "elements": [
+                {
+                  "name": "replica-4-server",
+                  "type": "server",
+                  "placement": {
+                    "left": 0,
+                    "top": 0,
+                    "width": 84,
+                    "height": 84
+                  },
+                  "constraint": {
+                    "horizontal": "center",
+                    "vertical": "top"
+                  },
+                  "background": {
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "border": {
+                    "width": 0,
+                    "color": {
+                      "fixed": "transparent"
+                    }
+                  },
+                  "config": {
+                    "type": "Single",
+                    "statusColor": {
+                      "field": "replica_4_model",
+                      "fixed": "#8E8E8E"
+                    },
+                    "bulbColor": {
+                      "field": "replica_4_model",
+                      "fixed": "#8E8E8E"
+                    },
+                    "blinkRate": {
+                      "fixed": 0
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "replica-4-model",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_4_model",
+                  "fixed": "판정 불가"
+                },
+                "align": "center",
+                "valign": "middle",
+                "size": 20,
+                "color": {
+                  "field": "replica_4_model",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 74,
+                "right": 4,
+                "top": 151,
+                "height": 28
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-4-comparison-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "비교 탐지기"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 74,
+                "right": 12,
+                "top": 188,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-4-comparison",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_4_comparison",
+                  "fixed": "판정 불가"
+                },
+                "align": "right",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "field": "replica_4_comparison",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 88,
+                "right": 4,
+                "top": 188,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-4-frequency-label",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "시스템콜 빈도 탐지기"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 74,
+                "right": 12,
+                "top": 211,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "replica-4-frequency",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "field",
+                  "field": "replica_4_frequency",
+                  "fixed": "판정 불가"
+                },
+                "align": "right",
+                "valign": "middle",
+                "size": 12,
+                "color": {
+                  "field": "replica_4_frequency",
+                  "fixed": "#8E8E8E"
+                }
+              },
+              "placement": {
+                "left": 88,
+                "right": 4,
+                "top": 211,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            },
+            {
+              "name": "meaning-legend",
+              "type": "text",
+              "config": {
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "그림은 모델 지목, 아래 두 줄은 실제 임계값 초과"
+                },
+                "align": "left",
+                "valign": "middle",
+                "size": 11,
+                "color": {
+                  "fixed": "text"
+                }
+              },
+              "placement": {
+                "left": 2,
+                "right": 4,
+                "top": 244,
+                "height": 20
+              },
+              "constraint": {
+                "horizontal": "scale",
+                "vertical": "top"
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "width": 0,
+                "color": {
+                  "fixed": "transparent"
+                }
+              }
+            }
+          ],
+          "background": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "border": {
+            "width": 0,
+            "color": {
+              "fixed": "transparent"
+            }
+          }
+        }
       },
       "targets": [
         {
@@ -121,418 +1870,178 @@
           },
           "editorMode": "code",
           "expr": "max((sum without(verdict) ((hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"normal\"} * 0) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"partial_infection\"} * 1) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"all_infection\"} * 2) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"drift\"} * 3) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"insufficient_data\"} * 4))) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(4)",
-          "refId": "A",
-          "range": true,
-          "instant": false,
+          "refId": "SERVICE",
+          "range": false,
+          "instant": true,
           "format": "time_series",
-          "legendFormat": "판정"
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "title": "현재 모델 판정",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "hycad-prometheus"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 4,
-        "w": 5,
-        "h": 4
-      },
-      "description": "전체 이상 의심은 서비스 분류입니다. 실제 임계값 초과 레플리카와 실제 공격 여부는 아래 근거로 구분합니다.",
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "판정 불가 입력 확인",
-          "unit": "none",
-          "decimals": 0,
-          "color": {
-            "mode": "thresholds"
+          "legendFormat": "service_classification"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
           },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "정상 범위",
-                  "color": "green"
-                },
-                "1": {
-                  "text": "부분 이상 의심",
-                  "color": "orange"
-                },
-                "2": {
-                  "text": "전체 이상 의심",
-                  "color": "red"
-                },
-                "3": {
-                  "text": "정상 변화 의심",
-                  "color": "blue"
-                },
-                "4": {
-                  "text": "판정 불가",
-                  "color": "gray"
-                }
-              }
+          "editorMode": "code",
+          "expr": "max((hycad_replica_anomaly{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_1\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "MODEL1",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_1_model"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_channel_a_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_1\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"a\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "COMPARE1",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_1_comparison"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_channel_b_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_1\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"b\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "FREQUENCY1",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_1_frequency"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_replica_anomaly{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_2\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "MODEL2",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_2_model"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_channel_a_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_2\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"a\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "COMPARE2",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_2_comparison"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_channel_b_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_2\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"b\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "FREQUENCY2",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_2_frequency"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_replica_anomaly{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_3\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "MODEL3",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_3_model"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_channel_a_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_3\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"a\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "COMPARE3",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_3_comparison"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_channel_b_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_3\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"b\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "FREQUENCY3",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_3_frequency"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_replica_anomaly{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_4\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "MODEL4",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_4_model"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_channel_a_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_4\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"a\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "COMPARE4",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_4_comparison"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "hycad-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((hycad_channel_b_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",replica=\"docker-compose_${deployment}_4\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"b\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
+          "refId": "FREQUENCY4",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "legendFormat": "replica_4_frequency"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFields",
+          "options": {
+            "include": {
+              "id": "byType",
+              "options": "number"
             }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
           }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "hycad-prometheus"
-          },
-          "editorMode": "code",
-          "expr": "max((sum without(verdict) ((hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"normal\"} * 0) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"partial_infection\"} * 1) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"all_infection\"} * 2) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"drift\"} * 3) or (hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"insufficient_data\"} * 4))) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(4)",
-          "refId": "A",
-          "range": false,
-          "instant": true,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "title": "입력 준비",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "hycad-prometheus"
-      },
-      "gridPos": {
-        "x": 5,
-        "y": 4,
-        "w": 4,
-        "h": 4
-      },
-      "description": "모든 레플리카 완전한 30초 창 최신 입력이 필요합니다. HTTP 연결만으로 정상 판정을 표시하지 않습니다.",
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "판정 불가 입력 확인",
-          "unit": "none",
-          "decimals": 0,
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "-1": {
-                  "text": "연결 선택 확인",
-                  "color": "gray"
-                },
-                "0": {
-                  "text": "판정 불가",
-                  "color": "orange"
-                },
-                "1": {
-                  "text": "판정 가능",
-                  "color": "green"
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "hycad-prometheus"
-          },
-          "editorMode": "code",
-          "expr": "max((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1))) or vector(-1)",
-          "refId": "A",
-          "range": false,
-          "instant": true,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "title": "시스템콜 빈도 탐지기 초과 레플리카",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "hycad-prometheus"
-      },
-      "gridPos": {
-        "x": 9,
-        "y": 4,
-        "w": 4,
-        "h": 4
-      },
-      "description": "현재 창에서 자신의 시스템콜 빈도 탐지기 점수가 기준선 임계값을 넘은 레플리카 수입니다. 전체 이상 의심이 곧 4개 모두 초과했다는 뜻은 아닙니다.",
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "판정 불가 입력 확인",
-          "unit": "none",
-          "decimals": 0,
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "-1": {
-                  "text": "판정 불가",
-                  "color": "gray"
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "hycad-prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum((hycad_channel_b_score{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} > bool on(deployment,mode,capture,job,instance) group_left() hycad_threshold{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",channel=\"b\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
-          "refId": "A",
-          "range": false,
-          "instant": true,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "title": "Normality drift",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "hycad-prometheus"
-      },
-      "gridPos": {
-        "x": 13,
-        "y": 4,
-        "w": 5,
-        "h": 4
-      },
-      "description": "비교 탐지기가 지목하지 않고 시스템콜 빈도 탐지기는 초과하며 작업량 탐지기는 안정 범위일 때 표시합니다. 버전이나 부하 등 정상 원인은 별도 확인이 필요합니다.",
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "판정 불가 입력 확인",
-          "unit": "none",
-          "decimals": 0,
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "-1": {
-                  "text": "판정 불가",
-                  "color": "gray"
-                },
-                "0": {
-                  "text": "현재 미관측",
-                  "color": "text"
-                },
-                "1": {
-                  "text": "정상 변화 의심",
-                  "color": "blue"
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "hycad-prometheus"
-          },
-          "editorMode": "code",
-          "expr": "max((hycad_verdict{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\",verdict=\"drift\"}) and on(deployment,mode,capture,job,instance) ((hycad_ready{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) == 1)) or vector(-1)",
-          "refId": "A",
-          "range": false,
-          "instant": true,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ]
-    },
-    {
-      "id": 6,
-      "title": "입력 원본 구간 종료",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "hycad-prometheus"
-      },
-      "gridPos": {
-        "x": 18,
-        "y": 4,
-        "w": 6,
-        "h": 4
-      },
-      "description": "캡처 모드에서는 과거 캡처의 시각입니다. LIVE 입력 상태와 혼동하지 않습니다.",
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "판정 불가 입력 확인",
-          "unit": "dateTimeAsIso",
-          "decimals": 0,
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "hycad-prometheus"
-          },
-          "editorMode": "code",
-          "expr": "max(hycad_window_end_timestamp_seconds{job=\"hycad\",deployment=\"$deployment\",mode=\"$mode\",capture=\"$capture\"} and on(job,instance) (up{job=\"hycad\"} == 1)) * 1000",
-          "refId": "A",
-          "range": false,
-          "instant": true,
-          "format": "time_series",
-          "legendFormat": ""
         }
       ]
     },
@@ -546,7 +2055,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 8,
+        "y": 10,
         "w": 12,
         "h": 7
       },
@@ -731,7 +2240,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 8,
+        "y": 10,
         "w": 12,
         "h": 7
       },
@@ -916,7 +2425,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 17,
         "w": 24,
         "h": 8
       },
@@ -1088,7 +2597,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 25,
         "w": 24,
         "h": 6
       },
@@ -1341,7 +2850,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 29,
+        "y": 31,
         "w": 24,
         "h": 6
       },
@@ -1384,7 +2893,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 37,
         "w": 24,
         "h": 1
       },
@@ -1399,7 +2908,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 36,
+            "y": 38,
             "w": 24,
             "h": 8
           },
@@ -1634,7 +3143,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 44,
+            "y": 46,
             "w": 24,
             "h": 7
           },
@@ -1863,7 +3372,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 51,
+            "y": 53,
             "w": 24,
             "h": 11
           },
@@ -2039,7 +3548,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 62,
+            "y": 64,
             "w": 24,
             "h": 8
           },
@@ -2302,7 +3811,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 70,
+            "y": 72,
             "w": 24,
             "h": 7
           },
@@ -2594,7 +4103,7 @@
           "description": "한 행을 펼치면 원본 윈도 시각, 제어기 분기, 비교 탐지기 특성별 기여, 레플리카별 비교 근거와 시스템콜 빈도 탐지기 편차를 확인할 수 있습니다. JSON 본문은 저장된 판정 근거이며 로그 스트림 레이블로 사용하지 않습니다. 입력 부족도 그대로 기록합니다. 표시할 로그가 없으면 근거 없음이며, 침해 여부의 결론이 아닙니다.",
           "gridPos": {
             "x": 0,
-            "y": 77,
+            "y": 79,
             "w": 24,
             "h": 9
           },

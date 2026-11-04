@@ -77,9 +77,10 @@ def ratio(channel):
     return fresh(f"{score} / on({MATCH}){join} ({threshold} > 0)")
 
 
-def crossed(channel):
+def crossed(channel, replica=None):
     threshold = metric("hycad_threshold", 'channel="' + channel + '"')
-    return fresh(f'{metric(f"hycad_channel_{channel}_score")} > bool on({MATCH}) group_left() '
+    extra = f'replica="{replica}"' if replica else ""
+    return fresh(f'{metric(f"hycad_channel_{channel}_score", extra)} > bool on({MATCH}) group_left() '
                  f'{threshold}')
 
 
@@ -139,6 +140,141 @@ def replica_styles():
     return result
 
 
+REPLICA_VALUES = {
+    "-1": {"text": "판정 불가", "color": "#8E8E8E"},
+    # Unflagged is deliberately not labelled "normal": a service-level drift
+    # or a partially suspicious service can still have unflagged replicas.
+    "0": {"text": "지목 없음", "color": "#5794F2"},
+    "1": {"text": "이상 의심", "color": "#FF9830"},
+}
+EXCEEDED_VALUES = {
+    "-1": {"text": "판정 불가", "color": "#8E8E8E"},
+    "0": {"text": "초과 없음", "color": "text"},
+    "1": {"text": "실제 초과", "color": "#FF9830"},
+}
+MANUAL_VALUES = {
+    "-1": {"text": "재생 연결 확인", "color": "gray"},
+    "0": {"text": "캡처 선택 대기", "color": "text"},
+    "1": {"text": "재생 중", "color": "green"},
+    "2": {"text": "일시정지", "color": "yellow"},
+    "3": {"text": "재생 완료", "color": "blue"},
+    "4": {"text": "중단됨", "color": "text"},
+    "5": {"text": "재생 오류", "color": "red"},
+}
+
+
+def canvas_element(name, kind, left, top, width, height, config):
+    # Canvas's horizontal scale constraint uses percentage left/right offsets.
+    # Vertical pixels keep labels readable while the four columns fit the panel.
+    return {"name": name, "type": kind, "config": config,
+            "placement": {"left": left, "right": 100 - left - width,
+                          "top": top, "height": height},
+            "constraint": {"horizontal": "scale", "vertical": "top"},
+            "background": {"color": {"fixed": "transparent"}},
+            "border": {"width": 0, "color": {"fixed": "transparent"}}}
+
+
+def canvas_text(name, text, left, top, width, height, *, field=None, size=14, align="center"):
+    # Native text supports field dimensions with a fixed fallback. Unlike the
+    # metric-value element, it does not expose "Field not found" to viewers.
+    return canvas_element(name, "text", left, top, width, height, {
+        "text": {"mode": "field", "field": field, "fixed": text} if field else {"mode": "fixed", "fixed": text},
+        "align": align, "valign": "middle", "size": size,
+        "color": {"field": field, "fixed": "#8E8E8E"} if field else {"fixed": "text"}})
+
+
+def canvas_field(p, ref, field, expr, mappings):
+    p["targets"].append(target(expr, ref, instant=True, legend=field))
+    # Binding by a unique display name avoids ambiguous Value/Value #A fields
+    # when a canvas consumes several Prometheus instant-query frames.
+    p["fieldConfig"]["overrides"].append({
+        "matcher": {"id": "byFrameRefID", "options": ref},
+        "properties": [{"id": "displayName", "value": field},
+                       {"id": "mappings", "value": value_mapping(mappings)}]})
+
+
+def canvas_server(i, left, field):
+    # The native server renders a square SVG whose intrinsic height follows
+    # its width. Do not stretch its width with a percentage constraint: wide
+    # panels would grow the SVG past the status text below it. A responsive
+    # column frame centers a fixed square, retaining the same four-column grid.
+    frame = canvas_element(f"replica-{i}-icon-frame", "frame", left, 59, 22, 90, {})
+    frame["elements"] = [{
+        "name": f"replica-{i}-server", "type": "server",
+        "placement": {"left": 0, "top": 0, "width": 84, "height": 84},
+        "constraint": {"horizontal": "center", "vertical": "top"},
+        "background": {"color": {"fixed": "transparent"}},
+        "border": {"width": 0, "color": {"fixed": "transparent"}},
+        "config": {"type": "Single", "statusColor": {"field": field, "fixed": "#8E8E8E"},
+                   "bulbColor": {"field": field, "fixed": "#8E8E8E"}, "blinkRate": {"fixed": 0}},
+    }]
+    return frame
+
+
+def replica_canvas():
+    """Native Grafana Canvas: server, text and field-color dimensions only.
+
+    Schema reference: Grafana's own canvas-examples.json and native elements:
+    https://github.com/grafana/grafana/tree/v13.2.4/public/app/features/canvas/elements
+    https://grafana.com/docs/grafana/latest/visualizations/panels-visualizations/visualizations/canvas/
+    No external images, HTML, plugins, or unauthenticated action buttons.
+    """
+    p = panel(13, "레플리카 상태", "canvas", (0, 0, 24, 10),
+              "네 개의 그림은 선택한 서비스의 레플리카입니다. 그림 색과 큰 문구는 모델의 지목이며 공격 확정이 아닙니다. "
+              "아래 두 줄은 비교 탐지기와 시스템콜 빈도 탐지기가 각 레플리카에서 실제 임계값을 초과했는지 표시합니다. "
+              "전체 이상 의심에서도 실제 초과가 없는 레플리카가 모델에 지목될 수 있습니다. "
+              "판정 가능한 최신 30초 입력이 없으면 회색 판정 불가로 표시합니다. 지목 없음은 정상 원인 확정을 뜻하지 않습니다.")
+    p["fieldConfig"]["defaults"].update(
+        unit="none", decimals=0, color={"mode": "thresholds"}, noValue="판정 불가",
+        mappings=value_mapping(REPLICA_VALUES),
+        thresholds={"mode": "absolute", "steps": [{"color": "#8E8E8E", "value": None}]})
+    # A byFrameRefID display-name override also renames the Time field. Canvas
+    # searches the first matching display name, so remove time-typed fields
+    # before binding. Match by type, not "Time", to remain safe irrespective of
+    # whether display names were already applied by the panel query pipeline.
+    p["transformations"] = [{"id": "filterFields", "options": {
+        "include": {"id": "byType", "options": "number"}}}]
+    elements = [
+        canvas_text("service-classification-label", "서비스 분류", 2, 4, 10, 22, size=12, align="left"),
+        canvas_text("service-classification", "판정 불가", 12, 4, 26, 22,
+                    field="service_classification", size=14, align="left"),
+    ]
+    canvas_field(p, "SERVICE", "service_classification", CURRENT_VERDICT, VERDICT_VALUES)
+    for i in range(1, 5):
+        left = 2 + (i - 1) * 24
+        replica = f"docker-compose_${{deployment}}_{i}"
+        state_field = f"replica_{i}_model"
+        compare_field = f"replica_{i}_comparison"
+        frequency_field = f"replica_{i}_frequency"
+        # Select the exact known container identity; a renamed/missing replica
+        # must become unknown rather than being assigned another replica's data.
+        flagged = fresh(metric("hycad_replica_anomaly", f'replica="{replica}"'))
+        canvas_field(p, f"MODEL{i}", state_field, f"max({flagged}) or vector(-1)", REPLICA_VALUES)
+        canvas_field(p, f"COMPARE{i}", compare_field, f"max({crossed('a', replica)}) or vector(-1)", EXCEEDED_VALUES)
+        canvas_field(p, f"FREQUENCY{i}", frequency_field, f"max({crossed('b', replica)}) or vector(-1)", EXCEEDED_VALUES)
+        elements.extend([
+            canvas_text(f"replica-{i}-label", f"레플리카 {i}", left, 33, 22, 24, size=18),
+            canvas_server(i, left, state_field),
+            canvas_text(f"replica-{i}-model", "판정 불가", left, 151, 22, 28,
+                        field=state_field, size=20),
+            canvas_text(f"replica-{i}-comparison-label", "비교 탐지기", left, 188, 14, 20, size=12, align="left"),
+            canvas_text(f"replica-{i}-comparison", "판정 불가", left + 14, 188, 8, 20,
+                        field=compare_field, size=12, align="right"),
+            canvas_text(f"replica-{i}-frequency-label", "시스템콜 빈도 탐지기", left, 211, 14, 20, size=12, align="left"),
+            canvas_text(f"replica-{i}-frequency", "판정 불가", left + 14, 211, 8, 20,
+                        field=frequency_field, size=12, align="right"),
+        ])
+    elements.append(canvas_text("meaning-legend", "그림은 모델 지목, 아래 두 줄은 실제 임계값 초과", 2, 244, 94, 20,
+                                size=11, align="left"))
+    p["options"] = {"inlineEditing": False, "showAdvancedTypes": False,
+                    "panZoom": False, "zoomToContent": False,
+                    "tooltip": {"mode": "single", "disableForOneClick": False},
+                    "root": {"name": "hycad-replicas", "type": "frame", "elements": elements,
+                             "background": {"color": {"fixed": "transparent"}},
+                             "border": {"width": 0, "color": {"fixed": "transparent"}}}}
+    return p
+
+
 def ratio_chart(pid, title, pos, channel, description):
     p = panel(pid, title, "timeseries", pos, description)
     custom = {"drawStyle": "line", "lineInterpolation": "stepAfter", "lineWidth": 2,
@@ -163,7 +299,7 @@ def ratio_chart(pid, title, pos, channel, description):
 
 
 def work_chart():
-    p = panel(9, "작업량 탐지기", "timeseries", (0, 15, 24, 8),
+    p = panel(9, "작업량 탐지기", "timeseries", (0, 17, 24, 8),
               "각 선은 한 레플리카의 연결 이벤트당 작업량 변화를 나타내며 모든 레플리카를 함께 표시합니다. "
               "30초 구간의 레플리카별 전체 이벤트 수를 accept와 accept4 이벤트 수로 나눕니다.\n\n"
               "실제 판정은 전체 레플리카의 이벤트 합을 연결 이벤트 합으로 나눈 작업량을 사용합니다. "
@@ -219,48 +355,18 @@ def build():
         query_variable("capture", "입력 캡처", 'label_values(hycad_window_seconds{job="hycad",deployment="$deployment",mode="$mode"}, capture)')
     ]}
     ps = d["panels"]
-    timeline = panel(1, "판정 흐름", "state-timeline", (0, 0, 24, 4),
-                     "기록 시각의 판정입니다. 캡처 재생의 시간축은 이번 재생 처리 시각이며 원본 캡처 시각은 아래에 별도 표시됩니다. "
-                     "회색은 불완전·오래된 입력 또는 연결 불가입니다. 정상 변화 의심은 A 침묵·B 초과·C 안정 조건이며 정상 원인이 입증됐다는 뜻은 아닙니다.")
-    timeline["targets"] = [target(CURRENT_VERDICT, legend="판정")]
-    timeline["fieldConfig"]["defaults"].update(
-        mappings=value_mapping(VERDICT_VALUES), color={"mode": "palette-classic"},
-        custom={"lineWidth": 0, "fillOpacity": 90},
-        thresholds={"mode": "absolute", "steps": [{"color": "gray", "value": None}]})
-    timeline["options"] = {"mergeValues": True, "showValue": "auto", "rowHeight": 0.9,
-                           "legend": {"showLegend": False}, "tooltip": {"mode": "single"}, "alignValue": "left"}
-    ps.append(timeline)
-    ps.append(stat(2, "현재 모델 판정", (0, 4, 5, 4), CURRENT_VERDICT, VERDICT_VALUES,
-                   description="전체 이상 의심은 서비스 분류입니다. 실제 임계값 초과 레플리카와 실제 공격 여부는 아래 근거로 구분합니다."))
-    ps.append(stat(3, "입력 준비", (5, 4, 4, 4), f"max({READY}) or vector(-1)", {
-        "-1": {"text": "연결·선택 확인", "color": "gray"},
-        "0": {"text": "판정 불가", "color": "orange"},
-        "1": {"text": "판정 가능", "color": "green"}},
-        description="모든 레플리카·완전한 30초 창·최신 입력이 필요합니다. HTTP 연결만으로 정상 판정을 표시하지 않습니다."))
-    ps.append(stat(4, "B 초과 레플리카", (9, 4, 4, 4), f"sum({crossed('b')}) or vector(-1)",
-                   {"-1": {"text": "판정 불가", "color": "gray"}},
-                   description="현재 창에서 자신의 B 점수가 기준선 임계값을 넘은 레플리카 수입니다. 전체 이상 의심이 곧 4개 모두 초과했다는 뜻은 아닙니다."))
-    drift = fresh(metric("hycad_verdict", 'verdict="drift"'))
-    ps.append(stat(5, "Normality drift", (13, 4, 5, 4),
-                   f'max({drift}) or vector(-1)', {
-                       "-1": {"text": "판정 불가", "color": "gray"},
-                       "0": {"text": "현재 미관측", "color": "text"},
-                       "1": {"text": "정상 변화 의심", "color": "blue"}},
-                   description="비교 탐지기가 지목하지 않고 시스템콜 빈도 탐지기는 초과하며 작업량 탐지기는 안정 범위일 때 표시합니다. 버전이나 부하 등 정상 원인은 별도 확인이 필요합니다."))
-    ps.append(stat(6, "입력 원본 구간 종료", (18, 4, 6, 4),
-                   f'max({metric("hycad_window_end_timestamp_seconds")} and on(job,instance) (up{{job="hycad"}} == 1)) * 1000',
-                   unit="dateTimeAsIso", description="캡처 모드에서는 과거 캡처의 시각입니다. LIVE 입력 상태와 혼동하지 않습니다."))
-    ps.append(ratio_chart(7, "비교 탐지기", (0, 8, 12, 7), "a",
+    ps.append(replica_canvas())
+    ps.append(ratio_chart(7, "비교 탐지기", (0, 10, 12, 7), "a",
                           "동일한 30초 구간의 레플리카 간 특성 차이를 비교합니다. "
                           "임계값은 유효한 정상 기준선의 모든 구간과 레플리카에서 관측한 비교 점수 최댓값의 2배입니다. "
                           "세로축은 점수 / 임계값이며 1보다 크면 초과입니다. 임계값이 0이면 비율은 표시하지 않고 레플리카 표에서 실제 초과를 확인합니다."))
-    ps.append(ratio_chart(8, "시스템콜 빈도 탐지기", (12, 8, 12, 7), "b",
+    ps.append(ratio_chart(8, "시스템콜 빈도 탐지기", (12, 10, 12, 7), "b",
                           "정상 기준선의 시스템콜 구성비 평균과 표준편차로 z 점수를 계산합니다. "
                           "레플리카 점수는 시스템콜별 절댓값 z 점수의 최댓값이고, 임계값은 정상 구간의 모든 레플리카 점수 중 최댓값입니다. "
                           "표준편차 하한은 0.00001입니다. 전체 레플리카의 25% 이상이 초과하면 서비스 수준의 빈도 이상 조건을 충족합니다. "
                           "세로축은 점수 / 임계값이며 1보다 크면 초과입니다. 로그축이므로 0은 표시되지 않습니다."))
     ps.append(work_chart())
-    replicas = panel(10, "레플리카별 판정", "table", (0, 23, 24, 6),
+    replicas = panel(10, "레플리카별 판정", "table", (0, 25, 24, 6),
                      "모델 지목과 각 레플리카의 A/B 실제 임계값 초과를 따로 표시합니다. 데이터가 불완전하거나 오래되면 이전 점수를 유지하지 않습니다.")
     replicas["targets"] = [target(f"max by(replica) ({expr})", ref, instant=True, table=True)
                             for ref, expr in (("A", fresh(metric("hycad_replica_anomaly"))),
@@ -286,7 +392,7 @@ def build():
             {"id": "custom.width", "value": 160}]}]
     replicas["options"] = {"showHeader": True, "cellHeight": "sm", "sortBy": [{"displayName": "레플리카", "desc": False}]}
     ps.append(replicas)
-    reasons = panel(11, "최근 판단 근거", "logs", (0, 29, 24, 6),
+    reasons = panel(11, "최근 판단 근거", "logs", (0, 31, 24, 6),
                     "완료된 창의 짧은 모델 설명입니다. 처리 시각과 원본 구간을 함께 확인하세요. 공격·정상 원인 검토와 전후 자료는 LIVE 사건 조사에서 확인합니다.")
     reasons["datasource"] = LOKI
     reasons["targets"] = [{"refId": "A", "datasource": LOKI, "editorMode": "code", "queryType": "range",
@@ -302,7 +408,7 @@ def build():
                           "enableLogDetails": True, "dedupStrategy": "none", "sortOrder": "Descending"}
     ps.append(reasons)
     details = json.loads(INVESTIGATION_TEMPLATE.read_text(encoding="utf-8"))
-    y = 36
+    y = 38
     detail_titles = {25: "사건 판정", 26: "검토 결과", 27: "원인 검토", 22: "레플리카별 지목", 23: "조사 자료", 21: "판정 근거 상세"}
     for item in details:
         item["title"] = detail_titles.get(item["id"], item["title"])
@@ -316,7 +422,7 @@ def build():
         item["gridPos"].update(x=0, y=y, w=24)
         y += item["gridPos"]["h"]
     ps.append({"id": 90, "title": "LIVE 사건 상세",
-               "type": "row", "collapsed": True, "gridPos": {"x": 0, "y": 35, "w": 24, "h": 1},
+               "type": "row", "collapsed": True, "gridPos": {"x": 0, "y": 37, "w": 24, "h": 1},
                "panels": details})
     return clean_display(d)
 
@@ -335,22 +441,15 @@ def build_manual():
         for t in p.get("targets", []):
             t["expr"] = t["expr"].replace('job="hycad"', 'job="hycad-manual"')
             t["expr"] = t["expr"].replace('playback!="manual"', 'playback="manual"')
-        if p["id"] == 1:
-            p["title"] = "수동 재생 흐름"
-        if p["id"] == 3:
-            p["title"] = "재생 제어 상태"
-            p["description"] = "위 '캡처 선택 · 시작/정지 · 배속' 버튼으로 재생을 제어합니다. 선택 전에는 대기합니다. 일시정지·중단·완료 시 점수와 판정을 유효 상태로 유지하지 않습니다."
-            p["targets"] = [target(
-                'max(hycad_manual_state{job="hycad-manual",deployment="$deployment",mode="$mode",capture="$capture"}'
-                ' and on(job,instance) (up{job="hycad-manual"} == 1)) or vector(-1)', instant=True)]
-            p["fieldConfig"]["defaults"]["mappings"] = value_mapping({
-                "-1": {"text": "연결·선택 확인", "color": "gray"},
-                "0": {"text": "캡처 선택 대기", "color": "text"},
-                "1": {"text": "재생 중", "color": "green"},
-                "2": {"text": "일시정지", "color": "yellow"},
-                "3": {"text": "재생 완료", "color": "blue"},
-                "4": {"text": "중단됨", "color": "text"},
-                "5": {"text": "재생 오류", "color": "red"}})
+        if p["id"] == 13:
+            p["options"]["root"]["elements"].extend([
+                canvas_text("manual-state-label", "수동 재생", 65, 4, 12, 22, size=12, align="right"),
+                canvas_text("manual-state", "재생 연결 확인", 78, 4, 18, 22,
+                            field="manual_control_state", size=13, align="right"),
+            ])
+            canvas_field(p, "CONTROL", "manual_control_state",
+                         'max(hycad_manual_state{job="hycad-manual",deployment="$deployment",mode="$mode",capture="$capture"}'
+                         ' and on(job,instance) (up{job="hycad-manual"} == 1)) or vector(-1)', MANUAL_VALUES)
         if p["id"] == 11:
             p["description"] = "현재 선택 캡처의 수동 재생 판단 근거입니다. 표시 시각은 이번 처리 시각이며 설명 안의 원본 구간과 구분합니다."
     for v in d["templating"]["list"]:
